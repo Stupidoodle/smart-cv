@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+spacy
+sentence-transformers
+scikit-learn
+numpy
+pandas
+chromadb
+python-dotenv
+texthero
+gensim
+torch
+transformers
