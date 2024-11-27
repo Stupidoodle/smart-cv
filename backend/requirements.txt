@@ -1,15 +1,10 @@
-fastapi
+fastapi~=0.115.5
 uvicorn
+sqlalchemy
+alembic
 pydantic
 python-multipart
-spacy
-sentence-transformers
-scikit-learn
-numpy
-pandas
-chromadb
+textract @ git+https://github.com/thehunmonkgroup/textract@2109f34b4f3615004de1f2b2e635cfd61dae3cb7
 python-dotenv
-texthero
-gensim
-torch
-transformers
+psycopg2
+pydantic-settings~=2.6.1

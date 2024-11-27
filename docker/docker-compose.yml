@@ -1,0 +1,45 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: ats_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend/app:/app/app
+      - ../backend/app/files:/app/files
+      - ../backend/migrations:/app/migrations
+      - ../backend/.env:/app/.env
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+    container_name: ats_frontend
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../frontend/streamlit_app:/app/streamlit_app
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:13
+    container_name: ats_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ats_user
+      POSTGRES_PASSWORD: ats_password
+      POSTGRES_DB: ats_applicant
+    volumes:
+      - ats_db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  ats_db_data:
