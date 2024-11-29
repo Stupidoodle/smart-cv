@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Float
+from sqlalchemy import Column, Integer, ForeignKey, Float, String
 from sqlalchemy.orm import relationship
 from app.models.base import Base
 
@@ -9,7 +9,7 @@ class AnalysisResult(Base):
     id = Column(Integer, primary_key=True, index=True)
     cv_id = Column(Integer, ForeignKey("cvs.id"), nullable=False)
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
-    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False)
+    conversation_id = Column(String, ForeignKey("conversations.id"), nullable=False)
     keyword_match_score = Column(Float, default=0.0)
     bert_similarity_score = Column(Float, default=0.0)
     cosine_similarity_score = Column(Float, default=0.0)
