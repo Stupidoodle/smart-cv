@@ -1,5 +1,3 @@
-import string
-
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import List
@@ -72,7 +70,7 @@ def list_assistants(skip: int = 0, limit: int = 100, db: Session = Depends(get_d
 
 
 @router.get("/{assistant_id}", response_model=AssistantResponse)
-def get_assistant(assistant_id: string, db: Session = Depends(get_db)):
+def get_assistant(assistant_id: str, db: Session = Depends(get_db)):
     assistant = (
         db.query(AssistantModel).filter(AssistantModel.id == assistant_id).first()
     )
