@@ -1,8 +1,8 @@
 """Add assistant, tool, conversation, message, run models
 
-Revision ID: aa8f4203239d
+Revision ID: 1007ec58dfb7
 Revises: 
-Create Date: 2024-11-29 16:54:36.735779
+Create Date: 2024-11-29 17:42:06.883190
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'aa8f4203239d'
+revision: str = '1007ec58dfb7'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -83,7 +83,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('cv_id', sa.Integer(), nullable=False),
     sa.Column('job_id', sa.Integer(), nullable=False),
-    sa.Column('conversation_id', sa.Integer(), nullable=False),
+    sa.Column('conversation_id', sa.String(), nullable=False),
     sa.Column('keyword_match_score', sa.Float(), nullable=True),
     sa.Column('bert_similarity_score', sa.Float(), nullable=True),
     sa.Column('cosine_similarity_score', sa.Float(), nullable=True),
