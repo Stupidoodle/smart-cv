@@ -12,7 +12,7 @@ import time
 
 class OpenAIAssistantService(AIBase):
     def __init__(self):
-        openai.api_key = settings.OPENAI_API_KEY
+        openai.api_key = settings.OPEN_AI_API_KEY
 
     def create_assistant(
         self,
