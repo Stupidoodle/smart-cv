@@ -19,10 +19,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Install Python dependencies
-COPY backend/requirements.txt .
 COPY backend/base-requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install -r base-requirements.txt
+COPY backend/requirements.txt .
+RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 RUN python3 -m spacy download en_core_web_sm
 

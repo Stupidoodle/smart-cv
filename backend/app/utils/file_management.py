@@ -10,6 +10,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(TEMPLATE_DIR, exist_ok=True)
 os.makedirs(PDF_DIR, exist_ok=True)
 
+
 def generate_unique_filename(original_filename: str) -> str:
     unique_id = uuid4().hex
     return f"{unique_id}_{original_filename}"

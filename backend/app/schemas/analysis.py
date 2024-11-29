@@ -1,9 +1,11 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+
 class AnalysisInitiate(BaseModel):
     cv_id: int
     job_id: int
+
 
 class AnalysisResponse(BaseModel):
     id: int

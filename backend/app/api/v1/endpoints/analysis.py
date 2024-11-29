@@ -34,10 +34,14 @@ def start_analysis(analysis_request: AnalysisInitiate, db: Session = Depends(get
         raise HTTPException(status_code=404, detail="Job not found.")
 
     # Check if analysis already exists
-    existing_analysis = db.query(AnalysisResult).filter(
-        AnalysisResult.cv_id == analysis_request.cv_id,
-        AnalysisResult.job_id == analysis_request.job_id
-    ).first()
+    existing_analysis = (
+        db.query(AnalysisResult)
+        .filter(
+            AnalysisResult.cv_id == analysis_request.cv_id,
+            AnalysisResult.job_id == analysis_request.job_id,
+        )
+        .first()
+    )
     if existing_analysis:
         return existing_analysis
 
@@ -46,10 +50,14 @@ def start_analysis(analysis_request: AnalysisInitiate, db: Session = Depends(get
         analyze_cv(analysis_request.cv_id, analysis_request.job_id)
 
         # Retrieve the newly created analysis
-        analysis = db.query(AnalysisResult).filter(
-            AnalysisResult.cv_id == analysis_request.cv_id,
-            AnalysisResult.job_id == analysis_request.job_id
-        ).first()
+        analysis = (
+            db.query(AnalysisResult)
+            .filter(
+                AnalysisResult.cv_id == analysis_request.cv_id,
+                AnalysisResult.job_id == analysis_request.job_id,
+            )
+            .first()
+        )
 
         return analysis
     except Exception as e:
@@ -58,10 +66,11 @@ def start_analysis(analysis_request: AnalysisInitiate, db: Session = Depends(get
 
 @router.get("/results/{cv_id}/{job_id}", response_model=AnalysisResponse)
 def get_analysis(cv_id: int, job_id: int, db: Session = Depends(get_db)):
-    analysis = db.query(AnalysisResult).filter(
-        AnalysisResult.cv_id == cv_id,
-        AnalysisResult.job_id == job_id
-    ).first()
+    analysis = (
+        db.query(AnalysisResult)
+        .filter(AnalysisResult.cv_id == cv_id, AnalysisResult.job_id == job_id)
+        .first()
+    )
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found.")
     return analysis

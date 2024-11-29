@@ -1,8 +1,10 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+
 class CVCreating(BaseModel):
     filename: str
+
 
 class CVResponse(BaseModel):
     id: int
@@ -11,6 +13,7 @@ class CVResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
 
 class CVListItem(BaseModel):
     id: int

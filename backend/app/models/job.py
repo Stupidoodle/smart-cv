@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from app.models.base import Base
 from datetime import datetime
 
+
 class Job(Base):
     __tablename__ = "jobs"
 
@@ -12,4 +13,6 @@ class Job(Base):
     company = Column(String, nullable=False)
     location = Column(String, nullable=True)
     posted_at = Column(DateTime, default=datetime.utcnow)
+
     analysis_results = relationship("AnalysisResult", back_populates="job")
+    conversations = relationship("Conversation", back_populates="job")

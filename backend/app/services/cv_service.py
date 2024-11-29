@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.utils.file_management import PDF_DIR
 import os
 
+
 def process_cv(cv_id: int):
     db: Session = SessionLocal()
     try:
@@ -20,13 +21,14 @@ def process_cv(cv_id: int):
     finally:
         db.close()
 
+
 def compile_latex(tex_file_path: str):
     try:
         subprocess.run(
             ["pdflatex", "-output-directory", PDF_DIR, tex_file_path],
             check=True,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         )
     except subprocess.CalledProcessError as e:
         raise Exception(f"LaTeX compilation failed: {e.stderr.decode()}")

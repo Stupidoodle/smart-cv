@@ -3,14 +3,19 @@ from sqlalchemy.orm import relationship
 from app.models.base import Base
 from datetime import datetime
 
+
 class CV(Base):
     __tablename__ = "cvs"
 
     id = Column(Integer, primary_key=True, index=True)
-    filename = Column(String, unique=True, index=True, nullable=False)
-    filepath = Column(String, unique=True, nullable=False)
+    filename = Column(String, nullable=False)
+    filepath = Column(String, nullable=False)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
+
     versions = relationship("CVVersion", back_populates="cv")
+    analysis_results = relationship("AnalysisResult", back_populates="cv")
+    conversations = relationship("Conversation", back_populates="cv")
+
 
 class CVVersion(Base):
     __tablename__ = "cv_versions"

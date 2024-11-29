@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Float
+from sqlalchemy import Column, Integer, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from app.models.base import Base
+
 
 class AnalysisResult(Base):
     __tablename__ = "analysis_results"
@@ -8,6 +9,7 @@ class AnalysisResult(Base):
     id = Column(Integer, primary_key=True, index=True)
     cv_id = Column(Integer, ForeignKey("cvs.id"), nullable=False)
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False)
     keyword_match_score = Column(Float, default=0.0)
     bert_similarity_score = Column(Float, default=0.0)
     cosine_similarity_score = Column(Float, default=0.0)
@@ -16,5 +18,6 @@ class AnalysisResult(Base):
     lsa_analysis_score = Column(Float, default=0.0)
     aggregated_score = Column(Float, default=0.0)
 
-    cv = relationship("CV")
+    cv = relationship("CV", back_populates="analysis_results")
     job = relationship("Job", back_populates="analysis_results")
+    conversation = relationship("Conversation")

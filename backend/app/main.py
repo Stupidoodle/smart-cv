@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.v1.endpoints import cv, jobs, analysis
+from app.api.v1.endpoints import cv, jobs, analysis, assistant, conversation, run
 from app.core.config import settings
 
 app = FastAPI(
@@ -12,7 +12,19 @@ app = FastAPI(
 # Include API routers
 app.include_router(cv.router, prefix=f"{settings.API_V1_STR}/cv", tags=["CV"])
 app.include_router(jobs.router, prefix=f"{settings.API_V1_STR}/jobs", tags=["Jobs"])
-app.include_router(analysis.router, prefix=f"{settings.API_V1_STR}/analysis", tags=["Analysis"])
+app.include_router(
+    analysis.router, prefix=f"{settings.API_V1_STR}/analysis", tags=["Analysis"]
+)
+app.include_router(
+    assistant.router, prefix=f"{settings.API_V1_STR}/assistants", tags=["Assistants"]
+)
+app.include_router(
+    conversation.router,
+    prefix=f"{settings.API_V1_STR}/conversations",
+    tags=["Conversations"],
+)
+app.include_router(run.router, prefix=f"{settings.API_V1_STR}/runs", tags=["Runs"])
+
 
 @app.get("/")
 def read_root():

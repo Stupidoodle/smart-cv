@@ -2,6 +2,7 @@ fastapi~=0.115.5
 uvicorn
 sqlalchemy
 alembic
+openai
 pydantic
 python-multipart
 textract @ git+https://github.com/thehunmonkgroup/textract@2109f34b4f3615004de1f2b2e635cfd61dae3cb7

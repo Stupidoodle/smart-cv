@@ -24,7 +24,7 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
         title=job.title,
         description=job.description,
         company=job.company,
-        location=job.location
+        location=job.location,
     )
     db.add(db_job)
     db.commit()
