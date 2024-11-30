@@ -3,7 +3,7 @@ from datetime import datetime
 
 
 class MessageCreate(BaseModel):
-    conversation_id: int
+    conversation_id: str
     role: str  # 'user' or 'assistant'
     content: str
 

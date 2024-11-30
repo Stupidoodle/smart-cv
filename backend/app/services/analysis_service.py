@@ -26,149 +26,233 @@ from app.services.cv_service import compile_latex
 from app.services.openai_assistant_service import OpenAIAssistantService
 from app.utils.file_management import PDF_DIR
 
-# Load spaCy model
-nlp = spacy.load("en_core_web_sm")
 
-# Load BERT model
-bert_model = SentenceTransformer("bert-base-nli-mean-tokens")
+def pre_process(text: str, ai_service: OpenAIAssistantService, db: Session) -> str:
+    pre_process_assistant = (
+        db.query(AssistantModel)
+        .filter(AssistantModel.name == "Preprocess Assistant")
+        .first()
+    )
+    pre_process_assistant_thread = ai_service.create_thread()
+    ai_service.add_message_to_thread(
+        thread_id=pre_process_assistant_thread.id,
+        role="user",
+        content=text,
+    )
+    pre_process_assistant_run = ai_service.run_assistant_on_thread(
+        thread_id=pre_process_assistant_thread.id,
+        assistant_id=pre_process_assistant.id,
+    )
+    if pre_process_assistant_run.status == "completed":
+        text = json.loads(
+            ai_service.list_messages_in_thread(
+                thread_id=pre_process_assistant_thread.id,
+            )[0]
+            .content[0]
+            .text.value
+        ).get("value")
+
+    return text
 
 
 def handle_run(
     run: Run,
     ai_service: OpenAIAssistantService,
     db: Session,
-    conversation: ConversationModel,
+    conversation_id: str,
 ):
-    if run.status == "requires_action":
-        tool_outputs = []
-        cv_entry = db.query(CV).filter(CV.id == conversation.cv_id).first()
-        job_entry = db.query(Job).filter(Job.id == conversation.job_id).first()
-        pdf_file_path = cv_entry.filepath.replace(".tex", ".pdf")
-        if not os.path.exists(pdf_file_path):
-            compile_latex(cv_entry.filepath)
+    current_run = run
 
-        cv_text = extract_text_from_pdf(pdf_file_path)
-        job_description = job_entry.description
-        for tool_call in run.required_action.submit_tool_outputs.tool_calls:
-            function_name = tool_call.function.name
-            arguments = json.loads(tool_call.function.arguments)
-
-            if function_name == "fetch_candidate_cv":
-                tool_outputs.append(
-                    {
-                        "tool_call_id": tool_call.id,
-                        "output": json.dumps({"cv_text": cv_text}),
-                    }
+    while current_run.status == "requires_action":
+        with SessionLocal() as session:
+            try:
+                conversation = (
+                    session.query(ConversationModel)
+                    .filter(ConversationModel.id == conversation_id)
+                    .first()
                 )
-            elif function_name == "fetch_job_description":
-                tool_outputs.append(
-                    {
-                        "tool_call_id": tool_call.id,
-                        "output": json.dumps(
+
+                tool_outputs = []
+                cv_entry = session.query(CV).filter(CV.id == conversation.cv_id).first()
+                job_entry = (
+                    session.query(Job).filter(Job.id == conversation.job_id).first()
+                )
+
+                pdf_file_path = cv_entry.filepath.replace(".tex", ".pdf")
+                if not os.path.exists(pdf_file_path):
+                    compile_latex(cv_entry.filepath)
+
+                cv_text = extract_text_from_pdf(
+                    PDF_DIR + "/" + os.path.basename(pdf_file_path)
+                )
+                job_description = job_entry.description
+                cv_text = pre_process(cv_text, ai_service, session)
+                job_description = pre_process(job_description, ai_service, session)
+
+                for (
+                    tool_call
+                ) in current_run.required_action.submit_tool_outputs.tool_calls:
+                    function_name = tool_call.function.name
+
+                    if function_name == "fetch_candidate_cv":
+                        tool_outputs.append(
                             {
-                                "job_description": job_description,
+                                "tool_call_id": tool_call.id,
+                                "output": json.dumps({"cv_text": cv_text}),
                             }
-                        ),
-                    }
-                )
-            elif function_name == "extract_essential_keywords":
-                keyword_assistant = (
-                    db.query(AssistantModel)
+                        )
+
+                    elif function_name == "fetch_job_description":
+                        tool_outputs.append(
+                            {
+                                "tool_call_id": tool_call.id,
+                                "output": json.dumps(
+                                    {"job_description": str(job_description)}
+                                ),
+                            }
+                        )
+
+                    elif function_name == "extract_essential_keywords":
+                        keyword_assistant = (
+                            session.query(AssistantModel)
+                            .filter(AssistantModel.name == "Keyword Assistant")
+                            .first()
+                        )
+                        keyword_thread = ai_service.create_thread()
+                        ai_service.add_message_to_thread(
+                            thread_id=keyword_thread.id,
+                            role="user",
+                            content=tool_call.function.arguments,
+                        )
+                        keyword_run = ai_service.run_assistant_on_thread(
+                            thread_id=keyword_thread.id,
+                            assistant_id=keyword_assistant.id,
+                        )
+
+                        if keyword_run.status == "completed":
+                            keyword_output = json.loads(
+                                ai_service.list_messages_in_thread(
+                                    thread_id=keyword_thread.id
+                                )[0]
+                                .content[0]
+                                .text.value
+                            ).get("strings")
+
+                            tool_outputs.append(
+                                {
+                                    "tool_call_id": tool_call.id,
+                                    "output": json.dumps({"keywords": keyword_output}),
+                                }
+                            )
+                        else:
+                            raise Exception("Keyword Assistant failed to run.")
+
+                    elif function_name == "start_static_analysis":
+                        keywords = json.loads(tool_call.function.arguments).get(
+                            "essential_keywords"
+                        )
+
+                        try:
+                            analysis = analyze_cv(
+                                cv_id=conversation.cv_id,
+                                job_id=conversation.job_id,
+                                conversation=conversation,
+                                keywords=keywords,
+                                session=session,
+                            )
+
+                            # Convert to dict immediately after creation while session is still active
+                            analysis_dict = {
+                                "id": analysis.id,
+                                "cv_id": analysis.cv_id,
+                                "job_id": analysis.job_id,
+                                "keyword_match_score": float(
+                                    analysis.keyword_match_score
+                                ),
+                                "bert_similarity_score": float(
+                                    analysis.bert_similarity_score
+                                ),
+                                "cosine_similarity_score": float(
+                                    analysis.cosine_similarity_score
+                                ),
+                                "jaccard_similarity_score": float(
+                                    analysis.jaccard_similarity_score
+                                ),
+                                "ner_similarity_score": float(
+                                    analysis.ner_similarity_score
+                                ),
+                                "lsa_analysis_score": float(
+                                    analysis.lsa_analysis_score
+                                ),
+                                "aggregated_score": float(analysis.aggregated_score),
+                            }
+
+                            tool_outputs.append(
+                                {
+                                    "tool_call_id": tool_call.id,
+                                    "output": json.dumps(analysis_dict),
+                                }
+                            )
+
+                        except Exception as e:
+                            raise Exception(f"Error during analysis: {e}")
+
+                run_entry = (
+                    session.query(RunModel)
                     .filter(
-                        AssistantModel.name == "Keyword Assistant",
+                        RunModel.id == current_run.id,
+                        RunModel.conversation_id == conversation.id,
                     )
                     .first()
                 )
-                keyword_assistant_thread = ai_service.create_thread()
-                ai_service.add_message_to_thread(
-                    thread_id=keyword_assistant_thread.id,
-                    role="user",
-                    content=tool_call.function.arguments,
-                )
-                keyword_assistant_run = ai_service.run_assistant_on_thread(
-                    thread_id=keyword_assistant_thread.id,
-                    assistant_id=keyword_assistant.id,
-                )
-                if keyword_assistant_run.status == "completed":
-                    keyword_assistant_output = json.loads(
-                        ai_service.list_messages_in_thread(
-                            thread_id=keyword_assistant_thread.id
-                        )[0]
-                        .content[0]
-                        .text.value
-                    ).get("strings")
 
-                    tool_outputs.append(
-                        {
-                            "tool_call_id": tool_call.id,
-                            "output": json.dumps(
-                                {"keywords": keyword_assistant_output}
-                            ),
-                        }
-                    )
-                else:
-                    raise Exception("Keyword Assistant failed to run.")
-            elif function_name == "start_static_analysis":
-                keywords = json.loads(tool_call.function.arguments).get(
-                    "essential_keywords"
-                )
-                try:
-                    analysis = analyze_cv(
-                        conversation.cv_id, conversation.job_id, keywords
-                    )
-                except Exception as e:
-                    raise Exception(f"Error during analysis: {e}")
-                if not analysis:
-                    raise Exception("Analysis failed.")
-                tool_outputs.append(
-                    {
-                        "tool_call_id": tool_call.id,
-                        "output": json.dumps(AnalysisResponseSchema.from_orm(analysis)),
-                    }
-                )
-            else:
-                # Handle unknown functions
-                tool_outputs.append(
-                    {
-                        "tool_call_id": tool_call.id,
-                        "output": "Function not implemented.",
-                    }
+                # Submit tool outputs and get new run state
+                new_run = ai_service.run_assistant_on_thread(
+                    thread_id=current_run.thread_id,
+                    run_id=current_run.id,
+                    tool_outputs=tool_outputs,
                 )
 
-            run_entry = (
-                db.query(RunModel)
-                .filter(
-                    RunModel.id == run.id,
-                    RunModel.conversation_id == conversation.id,
-                )
-                .first()
-            )
+                # Update run entry if it exists
+                if run_entry:
+                    run_entry.status = new_run.status
+                    run_entry.updated_at = datetime.now()
+                    session.commit()
 
-            run = ai_service.run_assistant_on_thread(
-                thread_id=run.thread_id, run_id=run.id, tool_outputs=tool_outputs
-            )
+                # Update current run for next iteration
+                current_run = new_run
 
-            if run_entry:
-                run_entry.status = run.status
-                run_entry.updated_at = datetime.now()
+            except Exception as e:
+                session.rollback()
+                raise e
 
-            handle_run(run, ai_service, db, conversation)
-
-            return run
+    return current_run
 
 
 def analyze_cv(
-    cv_id: int, job_id: int, keywords: Optional[List[str]] = None
+    cv_id: int,
+    job_id: int,
+    conversation: ConversationModel,
+    keywords: Optional[List[str]] = None,
+    session: Optional[Session] = None,
 ) -> Optional[AnalysisResult]:
-    db: Session = SessionLocal()
+    if session is None:
+        session = SessionLocal()
+        should_close = True
+    else:
+        should_close = False
+
     try:
-        cv_entry = db.query(CV).filter(CV.id == cv_id).first()
-        job_entry = db.query(Job).filter(Job.id == job_id).first()
-        existing_analysis = db.query(AnalysisResult).filter(
-            AnalysisResult.cv_id == cv_id, AnalysisResult.job_id == job_id
+        cv_entry = session.query(CV).filter(CV.id == cv_id).first()
+        job_entry = session.query(Job).filter(Job.id == job_id).first()
+        existing_analysis = (
+            session.query(AnalysisResult)
+            .filter(AnalysisResult.cv_id == cv_id, AnalysisResult.job_id == job_id)
+            .first()
         )
-        if existing_analysis.first():
-            return existing_analysis.first()
+
+        if existing_analysis:
+            return existing_analysis
 
         if not cv_entry:
             raise Exception("CV not found in database.")
@@ -194,7 +278,7 @@ def analyze_cv(
         ner_score = ner_similarity_score(extracted_text, job_description)
         lsa_score = lsa_analysis_score(extracted_text, job_description)
 
-        # Aggregate scores (weighted average example)
+        # Aggregate scores
         aggregated = (
             keyword_score * 0.2
             + bert_score * 0.2
@@ -204,10 +288,11 @@ def analyze_cv(
             + lsa_score * 0.1
         )
 
-        # Store analysis results
+        # Create and persist analysis results
         analysis = AnalysisResult(
             cv_id=cv_id,
             job_id=job_id,
+            conversation_id=conversation.id,
             keyword_match_score=keyword_score,
             bert_similarity_score=float(bert_score),
             cosine_similarity_score=float(cosine_score),
@@ -216,16 +301,19 @@ def analyze_cv(
             lsa_analysis_score=float(lsa_score),
             aggregated_score=float(aggregated),
         )
-        db.add(analysis)
-        db.commit()
+        session.add(analysis)
+        session.commit()
+
+        # Refresh to ensure all attributes are loaded
+        session.refresh(analysis)
+        return analysis
 
     except Exception as e:
-        print(f"Error during analysis: {e}")
+        session.rollback()
         raise e
     finally:
-        db.close()
-
-    return analysis
+        if should_close:
+            session.close()
 
 
 def extract_text_from_pdf(pdf_file_path: str) -> str:
@@ -264,6 +352,7 @@ def keyword_matching(
 
 
 def bert_similarity_score(cv_text: str, job_description: str) -> float:
+    bert_model = SentenceTransformer("bert-base-nli-mean-tokens")
     embeddings = bert_model.encode([cv_text, job_description])
     similarity = cosine_similarity([embeddings[0]], [embeddings[1]])[0][0] * 100
     return round(similarity, 2)
@@ -288,6 +377,7 @@ def jaccard_similarity_score(cv_text: str, job_description: str) -> float:
 
 
 def ner_similarity_score(cv_text: str, job_description: str) -> float:
+    nlp = spacy.load("en_core_web_sm")
     cv_doc = nlp(cv_text)
     job_doc = nlp(job_description)
 

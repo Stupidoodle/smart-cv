@@ -1,7 +1,7 @@
 # backend/app/api/v1/endpoints/run.py
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import SessionLocal
@@ -29,6 +29,7 @@ def run_assistant(
     conversation_id: str,
     instructions: Optional[str] = None,
     db: Session = Depends(get_db),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
 ):
     try:
         # Fetch the conversation
@@ -60,7 +61,13 @@ def run_assistant(
         db.refresh(db_run)
 
         # Handle the run (function calls if any)
-        handle_run(run, ai_service, db, conversation)
+        background_tasks.add_task(
+            handle_run,
+            run=run,
+            ai_service=ai_service,
+            db=db,
+            conversation_id=conversation_id,
+        )
 
         return db_run
     except Exception as e:

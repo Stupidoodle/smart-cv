@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import List
@@ -95,6 +97,29 @@ def add_message(
 
 @router.get("/{conversation_id}/messages", response_model=List[MessageResponse])
 def list_messages(conversation_id: str, db: Session = Depends(get_db)):
+    messages = ai_service.list_messages_in_thread(conversation_id)
+    if messages:
+        for message in messages:
+            message_entry = (
+                db.query(Message)
+                .filter(
+                    Message.id == message.id,
+                    Message.conversation_id == conversation_id,
+                    Message.role == message.role,
+                )
+                .first()
+            )
+            if not message_entry:
+                db_message = Message(
+                    id=message.id,
+                    conversation_id=conversation_id,
+                    role=message.role,
+                    content=message.content[0].text.value,
+                    timestamp=datetime.fromtimestamp(message.created_at),
+                )
+                db.add(db_message)
+                db.commit()
+                db.refresh(db_message)
     messages = (
         db.query(Message)
         .filter(Message.conversation_id == conversation_id)

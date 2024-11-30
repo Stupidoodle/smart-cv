@@ -19,15 +19,15 @@ class OpenAIAssistantService(AIBase):
         name: str,
         instructions: str,
         model: str,
-        tools: List[Dict[str, Any]],
-        response_format: Optional[BaseModel],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        response_format: Optional[Dict[str, Any]] = None,
     ) -> Assistant:
         assistant = openai.beta.assistants.create(
             name=name,
             instructions=instructions,
             model=model,
             tools=tools,
-            response_format=response_format,
+            response_format=(response_format if response_format else None),
         )
         return assistant
 
@@ -69,6 +69,13 @@ class OpenAIAssistantService(AIBase):
                 instructions=instructions,
             )
         return run
+
+    @staticmethod
+    def cancel_run(run_id: str, thread_id: str):
+        try:
+            openai.beta.threads.runs.cancel(run_id=run_id, thread_id=thread_id)
+        except Exception as e:
+            print(f"Error cancelling run: {e}")
 
     def list_messages_in_thread(self, thread_id: str) -> List[Message]:
         messages = openai.beta.threads.messages.list(

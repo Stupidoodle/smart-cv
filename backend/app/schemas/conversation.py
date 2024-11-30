@@ -13,10 +13,10 @@ class ConversationCreate(BaseModel):
 
 
 class ConversationResponse(BaseModel):
-    id: int
+    id: str
     cv_id: int
     job_id: int
-    assistant_id: int
+    assistant_id: str
     started_at: datetime
     ended_at: Optional[datetime] = None
     messages: List[MessageResponse] = field(default_factory=List)

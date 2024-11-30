@@ -12,8 +12,14 @@ st.set_page_config(page_title="Applicant ATS", layout="wide")
 
 st.title("Applicant Tracking System for Applicants")
 
-menu = ["Upload CV", "View Analysis", "Job Management", "Assistant Management",
-        "Start Analysis", "Interview Prep"]
+menu = [
+    "Upload CV",
+    "View Analysis",
+    "Job Management",
+    "Assistant Management",
+    "Start Analysis",
+    "Interview Prep",
+]
 choice = st.sidebar.selectbox("Menu", menu)
 
 
@@ -72,7 +78,8 @@ def get_conversations():
 def get_messages(conversation_id):
     try:
         response = requests.get(
-            f"{API_BASE_URL}/conversations/{conversation_id}/messages")
+            f"{API_BASE_URL}/conversations/{conversation_id}/messages"
+        )
         if response.status_code == 200:
             return response.json()
         else:
@@ -86,7 +93,8 @@ def get_messages(conversation_id):
 def get_conversation(conversation_id):
     try:
         response = requests.get(
-            f"{API_BASE_URL}/analysis/conversation/{conversation_id}")
+            f"{API_BASE_URL}/analysis/conversation/{conversation_id}"
+        )
         if response.status_code == 200:
             return response.json()
         else:
@@ -113,28 +121,33 @@ def initiate_run(conversation_id):
 
 def poll_run(conversation_id, run_id):
     run_status = "pending"
-    while run_status not in ["completed", "failed"]:
+
+    status_placeholder = st.empty()
+    while run_status not in ["completed"]:
         time.sleep(2)  # Polling interval
         response = requests.get(f"{API_BASE_URL}/runs/{conversation_id}/run/{run_id}")
         if response.status_code == 200:
             run = response.json()
             run_status = run["status"]
-            st.write(f"Run Status: {run_status}")
+            status_placeholder.write(
+                f"Run Status: {run_status} - Updated at: {run['updated_at']}"
+            )
         else:
             st.error(f"Failed to poll run status: {response.text}")
             break
     return run_status
 
 
-def add_initial_message(conversation_id,
-                        content="Analyze my CV against this job posting and provide insights."):
+def add_initial_message(conversation_id, content="Follow your instructions."):
     try:
         response = requests.post(
-            f"{API_BASE_URL}/conversations/{conversation_id}/messages", json={
+            f"{API_BASE_URL}/conversations/{conversation_id}/messages",
+            json={
                 "conversation_id": conversation_id,
                 "role": "user",
-                "content": content
-            })
+                "content": content,
+            },
+        )
         if response.status_code == 200:
             st.write("User message added.")
         else:
@@ -154,11 +167,13 @@ if choice == "Upload CV":
                 if response.status_code == 200:
                     st.success("CV uploaded and processed successfully!")
                     cv_info = response.json()
-                    st.write({
-                        "CV ID": cv_info["id"],
-                        "Filename": cv_info["filename"],
-                        "Uploaded At": cv_info["uploaded_at"]
-                    })
+                    st.write(
+                        {
+                            "CV ID": cv_info["id"],
+                            "Filename": cv_info["filename"],
+                            "Uploaded At": cv_info["uploaded_at"],
+                        }
+                    )
                 else:
                     st.error(f"Failed to upload CV: {response.text}")
             except Exception as e:
@@ -177,9 +192,11 @@ elif choice == "View Analysis":
                 st.write(f"**Keyword Match Score:** {data['keyword_match_score']}%")
                 st.write(f"**BERT Similarity Score:** {data['bert_similarity_score']}%")
                 st.write(
-                    f"**Cosine Similarity Score:** {data['cosine_similarity_score']}%")
+                    f"**Cosine Similarity Score:** {data['cosine_similarity_score']}%"
+                )
                 st.write(
-                    f"**Jaccard Similarity Score:** {data['jaccard_similarity_score']}%")
+                    f"**Jaccard Similarity Score:** {data['jaccard_similarity_score']}%"
+                )
                 st.write(f"**NER Similarity Score:** {data['ner_similarity_score']}%")
                 st.write(f"**LSA Analysis Score:** {data['lsa_analysis_score']}%")
                 st.write(f"**Aggregated Score:** {data['aggregated_score']}%")
@@ -195,8 +212,12 @@ elif choice == "View Analysis":
                 }
 
                 fig, ax = plt.subplots(figsize=(10, 6))
-                sns.barplot(x=list(scores.keys()), y=list(scores.values()),
-                            palette="viridis", ax=ax)
+                sns.barplot(
+                    x=list(scores.keys()),
+                    y=list(scores.values()),
+                    palette="viridis",
+                    ax=ax,
+                )
                 ax.set_ylim(0, 100)
                 ax.set_ylabel("Score (%)")
                 ax.set_title("Detailed Analysis Scores")
@@ -205,16 +226,17 @@ elif choice == "View Analysis":
                 # Optionally, display conversation history
                 st.subheader("Conversation History")
                 conversation_id = data.get(
-                    "conversation_id")  # Ensure AnalysisResult includes conversation_id
+                    "conversation_id"
+                )  # Ensure AnalysisResult includes conversation_id
                 if conversation_id:
                     conversation = get_conversation(conversation_id)
                     if conversation:
-                        for msg in conversation['messages']:
-                            if msg['role'] == 'user':
+                        for msg in conversation["messages"]:
+                            if msg["role"] == "user":
                                 st.markdown(f"**You:** {msg['content']}")
-                            elif msg['role'] == 'assistant':
+                            elif msg["role"] == "assistant":
                                 try:
-                                    ai_response = json.loads(msg['content'])
+                                    ai_response = json.loads(msg["content"])
                                     st.markdown(f"**AI Assistant:** {ai_response}")
                                 except json.JSONDecodeError:
                                     st.markdown(f"**AI Assistant:** {msg['content']}")
@@ -225,8 +247,9 @@ elif choice == "View Analysis":
 
 elif choice == "Job Management":
     st.header("Manage Job Postings")
-    sub_menu = st.sidebar.selectbox("Job Menu", ["View Jobs", "Add Job", "Update Job",
-                                                 "Delete Job"])
+    sub_menu = st.sidebar.selectbox(
+        "Job Menu", ["View Jobs", "Add Job", "Update Job", "Delete Job"]
+    )
 
     if sub_menu == "View Jobs":
         st.subheader("All Job Postings")
@@ -265,7 +288,7 @@ elif choice == "Job Management":
                         "title": title,
                         "company": company,
                         "location": location,
-                        "description": description
+                        "description": description,
                     }
                     try:
                         response = requests.post(f"{API_BASE_URL}/jobs/", json=job_data)
@@ -282,10 +305,12 @@ elif choice == "Job Management":
         jobs = get_jobs()
         if jobs:
             job_options = {
-                f"{job['title']} at {job['company']} (ID: {job['id']})": job['id'] for
-                job in jobs}
-            selected_job = st.selectbox("Select Job to Update",
-                                        list(job_options.keys()))
+                f"{job['title']} at {job['company']} (ID: {job['id']})": job["id"]
+                for job in jobs
+            }
+            selected_job = st.selectbox(
+                "Select Job to Update", list(job_options.keys())
+            )
             job_id = job_options[selected_job]
 
             # Fetch job details
@@ -294,28 +319,32 @@ elif choice == "Job Management":
                 if response.status_code == 200:
                     job = response.json()
                     with st.form("update_job_form"):
-                        title = st.text_input("Job Title", value=job['title'])
-                        company = st.text_input("Company", value=job['company'])
-                        location = st.text_input("Location",
-                                                 value=job.get('location', ''))
-                        description = st.text_area("Job Description",
-                                                   value=job['description'])
+                        title = st.text_input("Job Title", value=job["title"])
+                        company = st.text_input("Company", value=job["company"])
+                        location = st.text_input(
+                            "Location", value=job.get("location", "")
+                        )
+                        description = st.text_area(
+                            "Job Description", value=job["description"]
+                        )
                         submitted = st.form_submit_button("Update Job")
                         if submitted:
                             update_data = {
                                 "title": title,
                                 "company": company,
                                 "location": location,
-                                "description": description
+                                "description": description,
                             }
                             update_response = requests.put(
-                                f"{API_BASE_URL}/jobs/{job_id}", json=update_data)
+                                f"{API_BASE_URL}/jobs/{job_id}", json=update_data
+                            )
                             if update_response.status_code == 200:
                                 st.success("Job posting updated successfully!")
                                 st.write(update_response.json())
                             else:
                                 st.error(
-                                    f"Failed to update job: {update_response.text}")
+                                    f"Failed to update job: {update_response.text}"
+                                )
                 else:
                     st.error(f"Job not found: {response.text}")
             except Exception as e:
@@ -328,10 +357,12 @@ elif choice == "Job Management":
         jobs = get_jobs()
         if jobs:
             job_options = {
-                f"{job['title']} at {job['company']} (ID: {job['id']})": job['id'] for
-                job in jobs}
-            selected_job = st.selectbox("Select Job to Delete",
-                                        list(job_options.keys()))
+                f"{job['title']} at {job['company']} (ID: {job['id']})": job["id"]
+                for job in jobs
+            }
+            selected_job = st.selectbox(
+                "Select Job to Delete", list(job_options.keys())
+            )
             job_id = job_options[selected_job]
             if st.button("Delete Job"):
                 try:
@@ -347,25 +378,35 @@ elif choice == "Job Management":
 
 elif choice == "Assistant Management":
     st.header("Manage Assistants")
-    sub_menu = st.sidebar.selectbox("Assistant Menu",
-                                    ["View Assistants", "Add Assistant"])
+    sub_menu = st.sidebar.selectbox(
+        "Assistant Menu", ["View Assistants", "Add Assistant"]
+    )
 
     if sub_menu == "View Assistants":
         st.subheader("All Assistants")
         try:
             assistants = get_assistants()
             if not assistants:
-                st.info("No assistants available.")
+                response = requests.post(f"{API_BASE_URL}/assistants/initiate")
+                if response.status_code == 200:
+                    st.info("Assistant initiated successfully.")
+                else:
+                    st.error(f"Failed to initiate assistant: {response.text}")
+                    st.info(
+                        "Please check your API key and try again. If the problem persists, please contact support."
+                    )
             else:
                 for assistant in assistants:
                     st.markdown(f"### {assistant['name']} (ID: {assistant['id']})")
                     st.markdown(f"**Model:** {assistant['model']}")
                     st.markdown(f"**Instructions:** {assistant['instructions']}")
                     st.markdown("**Tools:**")
-                    for tool in assistant['tools']:
+                    for tool in assistant["tools"]:
                         tool_info = f"- **Type:** {tool['type']}"
-                        if tool['function']:
-                            tool_info += f", **Function Name:** {tool['function']['name']}"
+                        if tool["function"]:
+                            tool_info += (
+                                f", **Function Name:** {tool['function']['name']}"
+                            )
                         st.markdown(tool_info)
                     st.markdown("---")
         except Exception as e:
@@ -376,17 +417,20 @@ elif choice == "Assistant Management":
         with st.form("add_assistant_form"):
             name = st.text_input("Assistant Name")
             instructions = st.text_area("Assistant Instructions")
-            model = st.selectbox("Model", ["gpt-4o",
-                                           "gpt-4o-mini"])  # Update models as needed
+            model = st.selectbox(
+                "Model", ["gpt-4o", "gpt-4o-mini"]
+            )  # Update models as needed
 
             # Define tools
             st.markdown("**Define Tools**")
-            tool_type = st.selectbox("Tool Type", ["function", "code_interpreter"],
-                                     key="tool_type")
+            tool_type = st.selectbox(
+                "Tool Type", ["function", "code_interpreter"], key="tool_type"
+            )
             tool_name = st.text_input("Tool Name", key="tool_name")
             tool_description = st.text_area("Tool Description", key="tool_description")
-            tool_parameters = st.text_area("Tool Parameters (JSON)",
-                                           key="tool_parameters")
+            tool_parameters = st.text_area(
+                "Tool Parameters (JSON)", key="tool_parameters"
+            )
 
             submitted = st.form_submit_button("Add Assistant")
             if submitted:
@@ -398,22 +442,22 @@ elif choice == "Assistant Management":
                     if tool_type and tool_name and tool_description:
                         try:
                             if tool_type == "function":
-                                parameters = json.loads(
-                                    tool_parameters) if tool_parameters else {}
+                                parameters = (
+                                    json.loads(tool_parameters)
+                                    if tool_parameters
+                                    else {}
+                                )
                                 tool = {
                                     "type": "function",
                                     "function": {
                                         "name": tool_name,
                                         "description": tool_description,
                                         "parameters": parameters,
-                                        "strict": True
-                                    }
+                                        "strict": True,
+                                    },
                                 }
                             elif tool_type == "code_interpreter":
-                                tool = {
-                                    "type": "code_interpreter",
-                                    "function": None
-                                }
+                                tool = {"type": "code_interpreter", "function": None}
                             tools.append(tool)
                         except json.JSONDecodeError:
                             st.error("Invalid JSON for tool parameters.")
@@ -422,12 +466,13 @@ elif choice == "Assistant Management":
                         "name": name,
                         "instructions": instructions,
                         "model": model,
-                        "tools": tools
+                        "tools": tools,
                     }
 
                     try:
-                        response = requests.post(f"{API_BASE_URL}/assistants/",
-                                                 json=assistant_data)
+                        response = requests.post(
+                            f"{API_BASE_URL}/assistants/", json=assistant_data
+                        )
                         if response.status_code == 200:
                             st.success("Assistant created successfully!")
                             st.write(response.json())
@@ -452,19 +497,22 @@ elif choice == "Start Analysis":
 
         if assistants and cvs and jobs:
             assistant_options = {
-                f"{assistant['name']} (ID: {assistant['id']})": assistant['id'] for
-                assistant in assistants}
-            selected_assistant = st.selectbox("Select Assistant",
-                                              list(assistant_options.keys()))
+                f"{assistant['name']} (ID: {assistant['id']})": assistant["id"]
+                for assistant in assistants
+            }
+            selected_assistant = st.selectbox(
+                "Select Assistant", list(assistant_options.keys())
+            )
             assistant_id = assistant_options[selected_assistant]
 
-            cv_options = {f"{cv['filename']} (ID: {cv['id']})": cv['id'] for cv in cvs}
+            cv_options = {f"{cv['filename']} (ID: {cv['id']})": cv["id"] for cv in cvs}
             selected_cv = st.selectbox("Select CV", list(cv_options.keys()))
             cv_id = cv_options[selected_cv]
 
             job_options = {
-                f"{job['title']} at {job['company']} (ID: {job['id']})": job['id'] for
-                job in jobs}
+                f"{job['title']} at {job['company']} (ID: {job['id']})": job["id"]
+                for job in jobs
+            }
             selected_job = st.selectbox("Select Job", list(job_options.keys()))
             job_id = job_options[selected_job]
 
@@ -473,66 +521,75 @@ elif choice == "Start Analysis":
                 analysis_data = {
                     "cv_id": cv_id,
                     "job_id": job_id,
-                    "assistant_id": assistant_id
+                    "assistant_id": assistant_id,
                 }
                 try:
-                    response = requests.post(f"{API_BASE_URL}/conversations/",
-                                             json=analysis_data)
+                    response = requests.post(
+                        f"{API_BASE_URL}/conversations/", json=analysis_data
+                    )
                     if response.status_code == 200:
                         conversation = response.json()
                         st.success("Conversation initiated successfully!")
-                        st.write({
-                            "Conversation ID": conversation["id"],
-                            "CV ID": conversation["cv_id"],
-                            "Job ID": conversation["job_id"],
-                            "Assistant ID": conversation["assistant_id"],
-                            "Started At": conversation["started_at"]
-                        })
+                        st.write(
+                            {
+                                "Conversation ID": conversation["id"],
+                                "CV ID": conversation["cv_id"],
+                                "Job ID": conversation["job_id"],
+                                "Assistant ID": conversation["assistant_id"],
+                                "Started At": conversation["started_at"],
+                            }
+                        )
 
                         # Add initial user message
-                        user_message = "Analyze my CV against this job posting and provide insights."
+                        user_message = "Follow your instructions."
                         add_msg_response = requests.post(
                             f"{API_BASE_URL}/conversations/{conversation['id']}/messages",
                             json={
                                 "conversation_id": conversation["id"],
                                 "role": "user",
-                                "content": user_message
-                            })
+                                "content": user_message,
+                            },
+                        )
                         if add_msg_response.status_code == 200:
                             st.write("User message added.")
                         else:
                             st.error(
-                                f"Failed to add user message: {add_msg_response.text}")
+                                f"Failed to add user message: {add_msg_response.text}"
+                            )
 
                         # Run Assistant
-                        run_response = initiate_run(conversation['id'])
+                        run_response = initiate_run(conversation["id"])
                         if run_response:
                             run_id = run_response["id"]
-                            st.write({
-                                "Run ID": run_response["id"],
-                                "Status": run_response["status"],
-                                "Created At": run_response["created_at"],
-                                "Updated At": run_response["updated_at"]
-                            })
+                            st.write(
+                                {
+                                    "Run ID": run_response["id"],
+                                    "Status": run_response["status"],
+                                    "Created At": run_response["created_at"],
+                                    "Updated At": run_response["updated_at"],
+                                }
+                            )
 
                             # Poll for run completion
-                            run_status = poll_run(conversation['id'], run_id)
+                            run_status = poll_run(conversation["id"], run_id)
 
                             if run_status == "completed":
                                 st.success("Analysis completed successfully!")
                                 # Fetch conversation messages
-                                messages = get_messages(conversation['id'])
+                                messages = get_messages(conversation["id"])
                                 for msg in messages:
-                                    if msg['role'] == 'user':
+                                    if msg["role"] == "user":
                                         st.markdown(f"**You:** {msg['content']}")
-                                    elif msg['role'] == 'assistant':
+                                    elif msg["role"] == "assistant":
                                         try:
-                                            ai_response = json.loads(msg['content'])
+                                            ai_response = json.loads(msg["content"])
                                             st.markdown(
-                                                f"**AI Assistant:** {ai_response}")
+                                                f"**AI Assistant:** {ai_response}"
+                                            )
                                         except json.JSONDecodeError:
                                             st.markdown(
-                                                f"**AI Assistant:** {msg['content']}")
+                                                f"**AI Assistant:** {msg['content']}"
+                                            )
                             else:
                                 st.error("Analysis failed or is still in progress.")
                     else:

@@ -162,3 +162,5 @@ cython_debug/
 .idea/
 /repomix-output.txt
 /src/.claudesync/
+/backend/.claudesync/
+.claudeignore
