@@ -11,6 +11,7 @@ class AnalysisResponse(BaseModel):
     id: int
     cv_id: int
     job_id: int
+    conversation_id: str
     keyword_match_score: float
     bert_similarity_score: float
     cosine_similarity_score: float

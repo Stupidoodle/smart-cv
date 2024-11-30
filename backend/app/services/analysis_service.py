@@ -245,9 +245,16 @@ def analyze_cv(
     try:
         cv_entry = session.query(CV).filter(CV.id == cv_id).first()
         job_entry = session.query(Job).filter(Job.id == job_id).first()
+        conversation_entry = session.query(ConversationModel).filter(
+            ConversationModel.id == conversation.id
+        )
         existing_analysis = (
             session.query(AnalysisResult)
-            .filter(AnalysisResult.cv_id == cv_id, AnalysisResult.job_id == job_id)
+            .filter(
+                AnalysisResult.cv_id == cv_id,
+                AnalysisResult.job_id == job_id,
+                AnalysisResult.conversation_id == conversation.id,
+            )
             .first()
         )
 

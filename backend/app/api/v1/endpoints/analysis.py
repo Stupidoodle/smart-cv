@@ -64,11 +64,33 @@ def start_analysis(analysis_request: AnalysisInitiate, db: Session = Depends(get
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/results/{cv_id}/{job_id}", response_model=AnalysisResponse)
-def get_analysis(cv_id: int, job_id: int, db: Session = Depends(get_db)):
+@router.get("/results/list/{cv_id}/{job_id}", response_model=List[int])
+def get_analysis_results(cv_id: int, job_id: int, db: Session = Depends(get_db)):
+    analysis_ids = [
+        result[0]
+        for result in (
+            db.query(AnalysisResult.id)
+            .filter(AnalysisResult.cv_id == cv_id, AnalysisResult.job_id == job_id)
+            .all()
+        )
+    ]
+
+    if not analysis_ids:
+        raise HTTPException(status_code=404, detail="Analysis not found.")
+    return analysis_ids
+
+
+@router.get("/results/{cv_id}/{job_id}/{analysis_id}", response_model=AnalysisResponse)
+def get_analysis(
+    cv_id: int, job_id: int, analysis_id: int, db: Session = Depends(get_db)
+):
     analysis = (
         db.query(AnalysisResult)
-        .filter(AnalysisResult.cv_id == cv_id, AnalysisResult.job_id == job_id)
+        .filter(
+            AnalysisResult.cv_id == cv_id,
+            AnalysisResult.job_id == job_id,
+            AnalysisResult.id == analysis_id,
+        )
         .first()
     )
     if not analysis:

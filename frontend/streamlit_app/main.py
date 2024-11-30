@@ -36,6 +36,21 @@ def get_cvs():
         return []
 
 
+def get_analysis(cv_id: int, job_id: int):
+    try:
+        response = requests.get(
+            f"{API_BASE_URL}/analysis/results/list/{cv_id}/{job_id}"
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"Failed to fetch analysis: {response.text}")
+            return []
+    except Exception as e:
+        st.error(f"An error occurred while fetching analysis: {e}")
+        return []
+
+
 def get_jobs():
     try:
         response = requests.get(f"{API_BASE_URL}/jobs/")
@@ -181,69 +196,112 @@ if choice == "Upload CV":
 
 elif choice == "View Analysis":
     st.header("View Analysis Results")
-    cv_id = st.number_input("Enter CV ID", min_value=1, step=1)
-    job_id = st.number_input("Enter Job ID", min_value=1, step=1)
-    if st.button("Get Analysis"):
-        try:
-            response = requests.get(f"{API_BASE_URL}/analysis/results/{cv_id}/{job_id}")
-            if response.status_code == 200:
-                data = response.json()
-                st.write("**Analysis Results:**")
-                st.write(f"**Keyword Match Score:** {data['keyword_match_score']}%")
-                st.write(f"**BERT Similarity Score:** {data['bert_similarity_score']}%")
-                st.write(
-                    f"**Cosine Similarity Score:** {data['cosine_similarity_score']}%"
-                )
-                st.write(
-                    f"**Jaccard Similarity Score:** {data['jaccard_similarity_score']}%"
-                )
-                st.write(f"**NER Similarity Score:** {data['ner_similarity_score']}%")
-                st.write(f"**LSA Analysis Score:** {data['lsa_analysis_score']}%")
-                st.write(f"**Aggregated Score:** {data['aggregated_score']}%")
+    cvs = get_cvs()
+    jobs = get_jobs()
 
-                # Visualization
-                scores = {
-                    "Keyword Match": data["keyword_match_score"],
-                    "BERT Similarity": data["bert_similarity_score"],
-                    "Cosine Similarity": data["cosine_similarity_score"],
-                    "Jaccard Similarity": data["jaccard_similarity_score"],
-                    "NER Similarity": data["ner_similarity_score"],
-                    "LSA Analysis": data["lsa_analysis_score"],
-                }
+    if not cvs:
+        st.warning("No CVs available. Please upload a CV first.")
+    if not jobs:
+        st.warning("No Job Postings available. Please add a job first.")
 
-                fig, ax = plt.subplots(figsize=(10, 6))
-                sns.barplot(
-                    x=list(scores.keys()),
-                    y=list(scores.values()),
-                    palette="viridis",
-                    ax=ax,
-                )
-                ax.set_ylim(0, 100)
-                ax.set_ylabel("Score (%)")
-                ax.set_title("Detailed Analysis Scores")
-                st.pyplot(fig)
+    if cvs and jobs:
+        cv_options = {f"{cv['filename']} (ID: {cv['id']})": cv["id"] for cv in cvs}
+        selected_cv = st.selectbox("Select CV", list(cv_options.keys()))
+        cv_id = cv_options[selected_cv]
 
-                # Optionally, display conversation history
-                st.subheader("Conversation History")
-                conversation_id = data.get(
-                    "conversation_id"
-                )  # Ensure AnalysisResult includes conversation_id
-                if conversation_id:
-                    conversation = get_conversation(conversation_id)
-                    if conversation:
-                        for msg in conversation["messages"]:
-                            if msg["role"] == "user":
-                                st.markdown(f"**You:** {msg['content']}")
-                            elif msg["role"] == "assistant":
-                                try:
-                                    ai_response = json.loads(msg["content"])
-                                    st.markdown(f"**AI Assistant:** {ai_response}")
-                                except json.JSONDecodeError:
-                                    st.markdown(f"**AI Assistant:** {msg['content']}")
-            else:
-                st.error(f"Failed to retrieve analysis: {response.text}")
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
+        job_options = {
+            f"{job['title']} at {job['company']} (ID: {job['id']})": job["id"]
+            for job in jobs
+        }
+        selected_job = st.selectbox("Select Job", list(job_options.keys()))
+        job_id = job_options[selected_job]
+
+        if cv_id and job_id:
+            analysis = get_analysis(cv_id, job_id)
+            print(analysis)
+
+            if analysis:
+                selected_analysis = st.selectbox("Select Analysis", analysis)
+                analysis_id = selected_analysis
+
+                if st.button("Get Analysis"):
+                    try:
+                        response = requests.get(
+                            f"{API_BASE_URL}/analysis/results/{cv_id}/{job_id}/{analysis_id}"
+                        )
+                        if response.status_code == 200:
+                            data = response.json()
+                            st.write("**Analysis Results:**")
+                            st.write(
+                                f"**Keyword Match Score:** {data['keyword_match_score']}%"
+                            )
+                            st.write(
+                                f"**BERT Similarity Score:** {data['bert_similarity_score']}%"
+                            )
+                            st.write(
+                                f"**Cosine Similarity Score:** {data['cosine_similarity_score']}%"
+                            )
+                            st.write(
+                                f"**Jaccard Similarity Score:** {data['jaccard_similarity_score']}%"
+                            )
+                            st.write(
+                                f"**NER Similarity Score:** {data['ner_similarity_score']}%"
+                            )
+                            st.write(
+                                f"**LSA Analysis Score:** {data['lsa_analysis_score']}%"
+                            )
+                            st.write(
+                                f"**Aggregated Score:** {data['aggregated_score']}%"
+                            )
+
+                            # Visualization
+                            scores = {
+                                "Keyword Match": data["keyword_match_score"],
+                                "BERT Similarity": data["bert_similarity_score"],
+                                "Cosine Similarity": data["cosine_similarity_score"],
+                                "Jaccard Similarity": data["jaccard_similarity_score"],
+                                "NER Similarity": data["ner_similarity_score"],
+                                "LSA Analysis": data["lsa_analysis_score"],
+                            }
+
+                            fig, ax = plt.subplots(figsize=(10, 6))
+                            sns.barplot(
+                                x=list(scores.keys()),
+                                y=list(scores.values()),
+                                palette="viridis",
+                                ax=ax,
+                            )
+                            ax.set_ylim(0, 100)
+                            ax.set_ylabel("Score (%)")
+                            ax.set_title("Detailed Analysis Scores")
+                            st.pyplot(fig)
+
+                            # Optionally, display conversation history
+                            st.subheader("Conversation History")
+                            print(data)
+                            conversation_id = data.get(
+                                "conversation_id"
+                            )  # Ensure AnalysisResult includes conversation_id
+                            if conversation_id:
+                                messages = get_messages(conversation_id)
+                                if messages:
+                                    for msg in messages:
+                                        if msg["role"] == "user":
+                                            st.markdown(f"**You:** {msg['content']}")
+                                        elif msg["role"] == "assistant":
+                                            try:
+                                                ai_response = json.loads(msg["content"])
+                                                st.markdown(
+                                                    f"**AI Assistant:** {ai_response}"
+                                                )
+                                            except json.JSONDecodeError:
+                                                st.markdown(
+                                                    f"**AI Assistant:** {msg['content']}"
+                                                )
+                        else:
+                            st.error(f"Failed to retrieve analysis: {response.text}")
+                    except Exception as e:
+                        st.error(f"An error occurred: {e}")
 
 elif choice == "Job Management":
     st.header("Manage Job Postings")
