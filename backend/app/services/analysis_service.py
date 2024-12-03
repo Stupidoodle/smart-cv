@@ -17,6 +17,7 @@ from app.models.cv import CV
 from app.models.job import Job
 from app.models.assistant import Assistant as AssistantModel
 from app.models.conversation import Conversation as ConversationModel
+from app.models.message import Message
 from app.models.run import Run as RunModel
 from app.schemas.analysis import AnalysisResponse as AnalysisResponseSchema
 from sqlalchemy.orm import Session
@@ -27,23 +28,57 @@ from app.services.openai_assistant_service import OpenAIAssistantService
 from app.utils.file_management import PDF_DIR
 
 
-def pre_process(text: str, ai_service: OpenAIAssistantService, db: Session) -> str:
+def pre_process(
+    text: str, ai_service: OpenAIAssistantService, db: Session, cv_id: int, job_id: int
+) -> str:
     pre_process_assistant = (
         db.query(AssistantModel)
         .filter(AssistantModel.name == "Preprocess Assistant")
         .first()
     )
     pre_process_assistant_thread = ai_service.create_thread()
-    ai_service.add_message_to_thread(
+    db_conversation = ConversationModel(
+        id=pre_process_assistant_thread.id,
+        cv_id=cv_id,
+        job_id=job_id,
+        assistant_id=pre_process_assistant.id,
+    )
+    db.add(db_conversation)
+    db.commit()
+    db.refresh(db_conversation)
+    message = ai_service.add_message_to_thread(
         thread_id=pre_process_assistant_thread.id,
         role="user",
         content=text,
     )
+    db_message = Message(
+        id=message.id,
+        conversation_id=db_conversation.id,
+        role=message.role,
+        content=message.content[0].text.value,
+        timestamp=datetime.fromtimestamp(message.created_at),
+    )
+    db.add(db_message)
+    db.commit()
+    db.refresh(db_message)
     pre_process_assistant_run = ai_service.run_assistant_on_thread(
         thread_id=pre_process_assistant_thread.id,
         assistant_id=pre_process_assistant.id,
     )
+    db_run = RunModel(
+        id=pre_process_assistant_run.id,
+        conversation_id=db_conversation.id,
+        status=pre_process_assistant_run.status,
+        updated_at=datetime.now(),
+    )
+    db.add(db_run)
+    db.commit()
+    db.refresh(db_run)
     if pre_process_assistant_run.status == "completed":
+        message_result = ai_service.list_messages_in_thread(
+            thread_id=pre_process_assistant_thread.id
+        )[0]
+
         text = json.loads(
             ai_service.list_messages_in_thread(
                 thread_id=pre_process_assistant_thread.id,
@@ -51,6 +86,17 @@ def pre_process(text: str, ai_service: OpenAIAssistantService, db: Session) -> s
             .content[0]
             .text.value
         ).get("value")
+
+        db_message_result = Message(
+            id=message_result.id,
+            conversation_id=db_conversation.id,
+            role=message_result.role,
+            content=text,
+            timestamp=datetime.fromtimestamp(message_result.created_at),
+        )
+        db.add(db_message_result)
+        db.commit()
+        db.refresh(db_message_result)
 
     return text
 
@@ -82,19 +128,24 @@ def handle_run(
                 if not os.path.exists(pdf_file_path):
                     compile_latex(cv_entry.filepath)
 
-                cv_text = extract_text_from_pdf(
-                    PDF_DIR + "/" + os.path.basename(pdf_file_path)
-                )
-                job_description = job_entry.description
-                cv_text = pre_process(cv_text, ai_service, session)
-                job_description = pre_process(job_description, ai_service, session)
+                cv_id = cv_entry.id
+                job_id = job_entry.id
 
                 for (
                     tool_call
                 ) in current_run.required_action.submit_tool_outputs.tool_calls:
                     function_name = tool_call.function.name
 
-                    if function_name == "fetch_candidate_cv":
+                    if (
+                        function_name == "fetch_candidate_cv"
+                        or function_name == "fetch_candidate_cv_1"
+                    ):
+                        cv_text = extract_text_from_pdf(
+                            PDF_DIR + "/" + os.path.basename(pdf_file_path)
+                        )
+                        cv_text = pre_process(
+                            cv_text, ai_service, session, cv_id, job_id
+                        )
                         tool_outputs.append(
                             {
                                 "tool_call_id": tool_call.id,
@@ -102,12 +153,45 @@ def handle_run(
                             }
                         )
 
-                    elif function_name == "fetch_job_description":
+                    elif (
+                        function_name == "fetch_job_description"
+                        or function_name == "fetch_job_description_1"
+                    ):
+                        job_description = job_entry.description
+                        job_description = pre_process(
+                            job_description, ai_service, session, cv_id, job_id
+                        )
                         tool_outputs.append(
                             {
                                 "tool_call_id": tool_call.id,
                                 "output": json.dumps(
                                     {"job_description": str(job_description)}
+                                ),
+                            }
+                        )
+
+                    elif function_name == "fetch_ai_analysis":
+                        analysis_result = (
+                            session.query(AnalysisResult)
+                            .filter(AnalysisResult.id == conversation.analysis_id)
+                            .first()
+                        )
+                        analysis_message = (
+                            session.query(Message)
+                            .filter(
+                                Message.conversation_id
+                                == analysis_result.conversation_id,
+                                Message.role == "assistant",
+                            )
+                            .first()
+                        )
+                        tool_outputs.append(
+                            {
+                                "tool_call_id": tool_call.id,
+                                "output": json.dumps(
+                                    {
+                                        "analysis_message": analysis_message.content,
+                                    }
                                 ),
                             }
                         )
@@ -119,17 +203,49 @@ def handle_run(
                             .first()
                         )
                         keyword_thread = ai_service.create_thread()
-                        ai_service.add_message_to_thread(
+                        db_conversation = ConversationModel(
+                            id=keyword_thread.id,
+                            cv_id=conversation.cv_id,
+                            job_id=conversation.job_id,
+                            assistant_id=keyword_assistant.id,
+                        )
+                        session.add(db_conversation)
+                        session.commit()
+                        session.refresh(db_conversation)
+                        message = ai_service.add_message_to_thread(
                             thread_id=keyword_thread.id,
                             role="user",
                             content=tool_call.function.arguments,
                         )
+                        db_message = Message(
+                            id=message.id,
+                            conversation_id=db_conversation.id,
+                            role=message.role,
+                            content=message.content[0].text.value,
+                            timestamp=datetime.fromtimestamp(message.created_at),
+                        )
+                        session.add(db_message)
+                        session.commit()
+                        session.refresh(db_message)
                         keyword_run = ai_service.run_assistant_on_thread(
                             thread_id=keyword_thread.id,
                             assistant_id=keyword_assistant.id,
                         )
+                        db_run = RunModel(
+                            id=keyword_run.id,
+                            conversation_id=db_conversation.id,
+                            status=keyword_run.status,
+                            created_at=datetime.fromtimestamp(run.created_at),
+                            updated_at=datetime.now(),
+                        )
+                        session.add(db_run)
+                        session.commit()
+                        session.refresh(db_run)
 
                         if keyword_run.status == "completed":
+                            message_result = ai_service.list_messages_in_thread(
+                                thread_id=keyword_thread.id
+                            )[0]
                             keyword_output = json.loads(
                                 ai_service.list_messages_in_thread(
                                     thread_id=keyword_thread.id
@@ -137,6 +253,18 @@ def handle_run(
                                 .content[0]
                                 .text.value
                             ).get("strings")
+                            db_message_result = Message(
+                                id=message_result.id,
+                                conversation_id=db_conversation.id,
+                                role=message_result.role,
+                                content=keyword_output,
+                                timestamp=datetime.fromtimestamp(
+                                    message_result.created_at
+                                ),
+                            )
+                            session.add(db_message_result)
+                            session.commit()
+                            session.refresh(db_message_result)
 
                             tool_outputs.append(
                                 {

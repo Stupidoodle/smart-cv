@@ -47,7 +47,8 @@ def create_conversation(
             id=thread.id,
             cv_id=conversation.cv_id,
             job_id=conversation.job_id,
-            assistant_id=conversation.assistant_id,
+            assistant_id=conversation.assistant_id,  # FIXME
+            analysis_id=conversation.analysis_id,
         )
         db.add(db_conversation)
         db.commit()

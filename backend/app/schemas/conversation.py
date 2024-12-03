@@ -10,6 +10,7 @@ class ConversationCreate(BaseModel):
     cv_id: int
     job_id: int
     assistant_id: str
+    analysis_id: Optional[int] = None
 
 
 class ConversationResponse(BaseModel):

@@ -11,6 +11,7 @@ class Conversation(Base):
     cv_id = Column(Integer, ForeignKey("cvs.id"), nullable=False)
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
     assistant_id = Column(String, ForeignKey("assistants.id"), nullable=False)
+    analysis_id = Column(Integer, nullable=True)
     started_at = Column(DateTime, default=datetime.utcnow)
     ended_at = Column(DateTime, nullable=True)
 

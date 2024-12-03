@@ -218,90 +218,212 @@ elif choice == "View Analysis":
 
         if cv_id and job_id:
             analysis = get_analysis(cv_id, job_id)
-            print(analysis)
 
             if analysis:
                 selected_analysis = st.selectbox("Select Analysis", analysis)
                 analysis_id = selected_analysis
 
-                if st.button("Get Analysis"):
+                if "analysis_data" not in st.session_state:
+                    st.session_state.analysis_data = None
+
+                if "conversation_data" not in st.session_state:
+                    st.session_state.conversation_data = None
+
+                get_analysis_button = st.button("Get Analysis")
+
+                if get_analysis_button:
                     try:
                         response = requests.get(
                             f"{API_BASE_URL}/analysis/results/{cv_id}/{job_id}/{analysis_id}"
                         )
                         if response.status_code == 200:
                             data = response.json()
-                            st.write("**Analysis Results:**")
-                            st.write(
-                                f"**Keyword Match Score:** {data['keyword_match_score']}%"
-                            )
-                            st.write(
-                                f"**BERT Similarity Score:** {data['bert_similarity_score']}%"
-                            )
-                            st.write(
-                                f"**Cosine Similarity Score:** {data['cosine_similarity_score']}%"
-                            )
-                            st.write(
-                                f"**Jaccard Similarity Score:** {data['jaccard_similarity_score']}%"
-                            )
-                            st.write(
-                                f"**NER Similarity Score:** {data['ner_similarity_score']}%"
-                            )
-                            st.write(
-                                f"**LSA Analysis Score:** {data['lsa_analysis_score']}%"
-                            )
-                            st.write(
-                                f"**Aggregated Score:** {data['aggregated_score']}%"
-                            )
-
-                            # Visualization
-                            scores = {
-                                "Keyword Match": data["keyword_match_score"],
-                                "BERT Similarity": data["bert_similarity_score"],
-                                "Cosine Similarity": data["cosine_similarity_score"],
-                                "Jaccard Similarity": data["jaccard_similarity_score"],
-                                "NER Similarity": data["ner_similarity_score"],
-                                "LSA Analysis": data["lsa_analysis_score"],
-                            }
-
-                            fig, ax = plt.subplots(figsize=(10, 6))
-                            sns.barplot(
-                                x=list(scores.keys()),
-                                y=list(scores.values()),
-                                palette="viridis",
-                                ax=ax,
-                            )
-                            ax.set_ylim(0, 100)
-                            ax.set_ylabel("Score (%)")
-                            ax.set_title("Detailed Analysis Scores")
-                            st.pyplot(fig)
-
-                            # Optionally, display conversation history
-                            st.subheader("Conversation History")
-                            print(data)
-                            conversation_id = data.get(
-                                "conversation_id"
-                            )  # Ensure AnalysisResult includes conversation_id
-                            if conversation_id:
-                                messages = get_messages(conversation_id)
-                                if messages:
-                                    for msg in messages:
-                                        if msg["role"] == "user":
-                                            st.markdown(f"**You:** {msg['content']}")
-                                        elif msg["role"] == "assistant":
-                                            try:
-                                                ai_response = json.loads(msg["content"])
-                                                st.markdown(
-                                                    f"**AI Assistant:** {ai_response}"
-                                                )
-                                            except json.JSONDecodeError:
-                                                st.markdown(
-                                                    f"**AI Assistant:** {msg['content']}"
-                                                )
+                            st.session_state.analysis_data = data
                         else:
                             st.error(f"Failed to retrieve analysis: {response.text}")
                     except Exception as e:
                         st.error(f"An error occurred: {e}")
+
+                if st.session_state.analysis_data:
+                    data = st.session_state.analysis_data
+                    st.write("**Analysis Results:**")
+                    st.write(f"**Keyword Match Score:** {data['keyword_match_score']}%")
+                    st.write(
+                        f"**BERT Similarity Score:** {data['bert_similarity_score']}%"
+                    )
+                    st.write(
+                        f"**Cosine Similarity Score:** {data['cosine_similarity_score']}%"
+                    )
+                    st.write(
+                        f"**Jaccard Similarity Score:** {data['jaccard_similarity_score']}%"
+                    )
+                    st.write(
+                        f"**NER Similarity Score:** {data['ner_similarity_score']}%"
+                    )
+                    st.write(f"**LSA Analysis Score:** {data['lsa_analysis_score']}%")
+                    st.write(f"**Aggregated Score:** {data['aggregated_score']}%")
+
+                    # Visualization
+                    scores = {
+                        "Keyword Match": data["keyword_match_score"],
+                        "BERT Similarity": data["bert_similarity_score"],
+                        "Cosine Similarity": data["cosine_similarity_score"],
+                        "Jaccard Similarity": data["jaccard_similarity_score"],
+                        "NER Similarity": data["ner_similarity_score"],
+                        "LSA Analysis": data["lsa_analysis_score"],
+                    }
+
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    sns.barplot(
+                        x=list(scores.keys()),
+                        y=list(scores.values()),
+                        palette="viridis",
+                        ax=ax,
+                    )
+                    ax.set_ylim(0, 100)
+                    ax.set_ylabel("Score (%)")
+                    ax.set_title("Detailed Analysis Scores")
+                    st.pyplot(fig)
+
+                    st.sidebar.subheader("Conversation History")
+                    # Optionally, display conversation history
+                    conversation_id = data.get(
+                        "conversation_id"
+                    )  # Ensure AnalysisResult includes conversation_id
+                    if conversation_id:
+                        messages = get_messages(conversation_id)
+                        if messages:
+                            for msg in messages:
+                                if msg["role"] == "user":
+                                    st.sidebar.markdown(f"**You:** {msg['content']}")
+                                elif msg["role"] == "assistant":
+                                    try:
+                                        ai_response = json.loads(msg["content"])
+                                        st.sidebar.markdown(
+                                            f"**AI Assistant:** {ai_response}"
+                                        )
+                                    except json.JSONDecodeError:
+                                        st.sidebar.markdown(
+                                            f"**AI Assistant:** {msg['content']}"
+                                        )
+                            assistants = get_assistants()
+
+                            if not assistants:
+                                st.sidebar.warning(
+                                    "No Assistants available. Please add an Assistant first."
+                                )
+
+                            if assistants:
+                                assistant_options = {
+                                    f"{assistant['name']} (ID: {assistant['id']})": assistant[
+                                        "id"
+                                    ]
+                                    for assistant in assistants
+                                }
+                                selected_assistant = st.sidebar.selectbox(
+                                    "Select Assistant",
+                                    list(assistant_options.keys()),
+                                    index=3,
+                                )
+                                assistant_id = assistant_options[selected_assistant]
+
+                                self_assessment_button = st.sidebar.button(
+                                    "Start Self Assessment",
+                                )
+
+                                if self_assessment_button:
+                                    analysis_data = {
+                                        "cv_id": cv_id,
+                                        "job_id": job_id,
+                                        "assistant_id": assistant_id,
+                                        "analysis_id": analysis_id,
+                                    }
+                                    try:
+                                        response = requests.post(
+                                            f"{API_BASE_URL}/conversations",
+                                            json=analysis_data,
+                                        )
+
+                                        if response.status_code == 200:
+                                            conversation = response.json()
+                                            st.session_state.conversation_data = (
+                                                conversation
+                                            )
+                                        else:
+                                            st.sidebar.error(
+                                                f"Failed to initiate conversation: {response.text}"
+                                            )
+                                    except Exception as e:
+                                        st.sidebar.error(f"An error occurred: {e}")
+
+                if st.session_state.conversation_data:
+                    conversation = st.session_state.conversation_data
+                    st.sidebar.success("Conversation initiated successfully!")
+                    st.sidebar.write(
+                        {
+                            "Conversation ID": conversation["id"],
+                            "CV ID": conversation["cv_id"],
+                            "Job ID": conversation["job_id"],
+                            "Assistant ID": conversation["assistant_id"],
+                            "Started At": conversation["started_at"],
+                        }
+                    )
+
+                    # Add initial user message
+                    user_message = "Follow your instructions."
+                    add_msg_response = requests.post(
+                        f"{API_BASE_URL}/conversations/{conversation['id']}/messages",
+                        json={
+                            "conversation_id": conversation["id"],
+                            "role": "user",
+                            "content": user_message,
+                        },
+                    )
+                    if add_msg_response.status_code == 200:
+                        st.sidebar.write("User message added.")
+                    else:
+                        st.sidebar.error(
+                            f"Failed to add user message: {add_msg_response.text}"
+                        )
+
+                    run_response = initiate_run(conversation["id"])
+                    if run_response:
+                        run_id = run_response["id"]
+                        st.sidebar.write(
+                            {
+                                "Run ID": run_response["id"],
+                                "Status": run_response["status"],
+                                "Created At": run_response["created_at"],
+                                "Updated At": run_response["updated_at"],
+                            }
+                        )
+
+                        # Poll for run completion
+                        run_status = poll_run(conversation["id"], run_id)
+
+                        if run_status == "completed":
+                            st.sidebar.success("Analysis completed successfully!")
+                            # Fetch conversation messages
+                            messages = get_messages(conversation["id"])
+                            for msg in messages:
+                                if msg["role"] == "assistant":
+                                    try:
+                                        questions = json.loads(msg["content"])
+
+                                        for question in questions["questions"]:
+                                            st.sidebar.slider(
+                                                question,
+                                                1,
+                                                10,
+                                                5,
+                                            )
+
+                                    except json.JSONDecodeError:
+                                        st.sidebar.markdown(
+                                            f"**AI Assistant:** {msg['content']}"
+                                        )
+                        else:
+                            st.sidebar.error("Analysis failed or is still in progress.")
 
 elif choice == "Job Management":
     st.header("Manage Job Postings")

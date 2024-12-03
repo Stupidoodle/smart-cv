@@ -2,10 +2,10 @@ import json
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from sqlalchemy import true
+from sqlalchemy import true, String, cast
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session
-from typing import List, cast
+from typing import List
 from app.database import SessionLocal
 from app.models.assistant import Assistant as AssistantModel
 from app.models.tool import Tool as ToolModel
@@ -358,34 +358,39 @@ def list_assistants(skip: int = 0, limit: int = 100, db: Session = Depends(get_d
                 db.refresh(db_assistant)
 
                 # Process tools for the new assistant
-                for tool in assistant.tools:
-                    tool_entry = (
-                        db.query(ToolModel)
-                        .filter(
-                            ToolModel.assistant_id == db_assistant.id,
-                            ToolModel.type == tool.type,
-                        )
-                        .filter(
-                            ToolModel.function_definition == tool.function.model_dump()
+            for tool in assistant.tools:
+                print(tool)
+                tool_entry = (
+                    db.query(ToolModel)
+                    .filter(
+                        ToolModel.assistant_id == assistant_entry.id,
+                        ToolModel.type == tool.type,
+                    )
+                    .filter(
+                        cast(ToolModel.function_definition, String)
+                        == json.dumps(tool.function.model_dump())
+                        if tool.type == "function"
+                        else None
+                    )
+                    .first()
+                )
+
+                if not tool_entry:
+                    db_tool = ToolModel(
+                        id=(
+                            tool.function.name if tool.type == "function" else tool.type
+                        ),
+                        assistant_id=assistant_entry.id,
+                        type=tool.type,
+                        function_definition=(
+                            tool.function.model_dump()
                             if tool.type == "function"
                             else None
-                        )
-                        .first()
+                        ),
                     )
-
-                    if not tool_entry:
-                        db_tool = ToolModel(
-                            assistant_id=db_assistant.id,
-                            type=tool.type,
-                            function_definition=(
-                                tool.function.model_dump()
-                                if tool.type == "function"
-                                else None
-                            ),
-                        )
-                        db.add(db_tool)
-                        db.commit()
-                        db.refresh(db_tool)
+                    db.add(db_tool)
+                    db.commit()
+                    db.refresh(db_tool)
 
     # Fetch and return paginated list of assistants
     assistants = db.query(AssistantModel).offset(skip).limit(limit).all()
