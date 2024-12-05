@@ -235,6 +235,9 @@ elif choice == "View Analysis":
                 get_analysis_button = st.button("Get Analysis")
 
                 if get_analysis_button:
+                    st.session_state.analysis_data = None
+                    st.session_state.conversation_data = None
+                    st.session_state.run_status = None
                     try:
                         response = requests.get(
                             f"{API_BASE_URL}/analysis/results/{cv_id}/{job_id}/{analysis_id}"
@@ -295,6 +298,7 @@ elif choice == "View Analysis":
                     )  # Ensure AnalysisResult includes conversation_id
                     if conversation_id:
                         messages = get_messages(conversation_id)
+                        ai_response = None
                         if messages:
                             for msg in messages:
                                 if msg["role"] == "user":
@@ -306,9 +310,16 @@ elif choice == "View Analysis":
                                             f"**AI Assistant:** {ai_response}"
                                         )
                                     except json.JSONDecodeError:
+                                        ai_response = msg["content"]
                                         st.sidebar.markdown(
-                                            f"**AI Assistant:** {msg['content']}"
+                                            f"**AI Assistant:** {ai_response}"
                                         )
+
+                            if not ai_response:
+                                st.sidebar.warning(
+                                    "No AI Assistant responses available."
+                                )
+
                             assistants = get_assistants()
 
                             if not assistants:
@@ -316,7 +327,7 @@ elif choice == "View Analysis":
                                     "No Assistants available. Please add an Assistant first."
                                 )
 
-                            if assistants:
+                            if assistants and ai_response:
                                 assistant_options = {
                                     f"{assistant['name']} (ID: {assistant['id']})": assistant[
                                         "id"
