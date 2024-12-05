@@ -1,0 +1,29 @@
+Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International Public License (CC BY-NC-ND 4.0)
+
+You are free to:
+- Use this work for personal, non-commercial purposes only.
+
+Under the following terms:
+- **Attribution**: You must give appropriate credit, provide a link to the license, and indicate if changes were made.
+- **NonCommercial**: You may not use the material for commercial purposes.
+- **NoDerivatives**: If you remix, transform, or build upon the material, you may not distribute the modified material.
+
+You may not:
+- Sell this work or any modified version of it.
+- Claim this work or derivative concepts as your own.
+
+**DISCLAIMER OF WARRANTY AND LIABILITY**
+
+This project is provided "as is," without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall the author or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the project or the use or other dealings in the project.
+
+**REFERENCE TO OPENAI TERMS**
+
+This project integrates the OpenAI Python API, which is governed by OpenAI’s Terms of Use. By using this project, you agree to comply with OpenAI’s terms, including but not limited to:
+- API Usage Guidelines: https://platform.openai.com/docs/usage-policies
+- Terms of Service: https://openai.com/policies/terms-of-use
+
+The author is not responsible for any misuse of the OpenAI API or any consequences resulting from violations of OpenAI's policies.
+
+By using this project, you agree to these terms.
+
+Full License Text: https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode

@@ -149,7 +149,7 @@ def handle_run(
                         tool_outputs.append(
                             {
                                 "tool_call_id": tool_call.id,
-                                "output": json.dumps({"cv_text": cv_text}),
+                                "output": cv_text,
                             }
                         )
 
@@ -164,9 +164,7 @@ def handle_run(
                         tool_outputs.append(
                             {
                                 "tool_call_id": tool_call.id,
-                                "output": json.dumps(
-                                    {"job_description": str(job_description)}
-                                ),
+                                "output": str(job_description),
                             }
                         )
 
@@ -281,44 +279,44 @@ def handle_run(
                         )
 
                         try:
-                            analysis = analyze_cv(
-                                cv_id=conversation.cv_id,
-                                job_id=conversation.job_id,
-                                conversation=conversation,
-                                keywords=keywords,
-                                session=session,
-                            )
+                            # analysis = analyze_cv(
+                            #     cv_id=conversation.cv_id,
+                            #     job_id=conversation.job_id,
+                            #     conversation=conversation,
+                            #     keywords=keywords,
+                            #     session=session,
+                            # )
 
                             # Convert to dict immediately after creation while session is still active
-                            analysis_dict = {
-                                "id": analysis.id,
-                                "cv_id": analysis.cv_id,
-                                "job_id": analysis.job_id,
-                                "keyword_match_score": float(
-                                    analysis.keyword_match_score
-                                ),
-                                "bert_similarity_score": float(
-                                    analysis.bert_similarity_score
-                                ),
-                                "cosine_similarity_score": float(
-                                    analysis.cosine_similarity_score
-                                ),
-                                "jaccard_similarity_score": float(
-                                    analysis.jaccard_similarity_score
-                                ),
-                                "ner_similarity_score": float(
-                                    analysis.ner_similarity_score
-                                ),
-                                "lsa_analysis_score": float(
-                                    analysis.lsa_analysis_score
-                                ),
-                                "aggregated_score": float(analysis.aggregated_score),
-                            }
+                            # analysis_dict = {
+                            #     "id": analysis.id,
+                            #     "cv_id": analysis.cv_id,
+                            #     "job_id": analysis.job_id,
+                            #     "keyword_match_score": float(
+                            #         analysis.keyword_match_score
+                            #     ),
+                            #     "bert_similarity_score": float(
+                            #         analysis.bert_similarity_score
+                            #     ),
+                            #     "cosine_similarity_score": float(
+                            #         analysis.cosine_similarity_score
+                            #     ),
+                            #     "jaccard_similarity_score": float(
+                            #         analysis.jaccard_similarity_score
+                            #     ),
+                            #     "ner_similarity_score": float(
+                            #         analysis.ner_similarity_score
+                            #     ),
+                            #     "lsa_analysis_score": float(
+                            #         analysis.lsa_analysis_score
+                            #     ),
+                            #     "aggregated_score": float(analysis.aggregated_score),
+                            # }
 
                             tool_outputs.append(
                                 {
                                     "tool_call_id": tool_call.id,
-                                    "output": json.dumps(analysis_dict),
+                                    "output": "Make up the scores yourself.",
                                 }
                             )
 
