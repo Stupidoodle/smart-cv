@@ -194,6 +194,56 @@ Ensure the resulting text is clean, easy to process, and devoid of unnecessary e
 # Output Format
 
 The output should be the cleaned version of the text in plain text format, without special characters or line breaks."""
+    SELF_ASSESSMENT_INSTRUCTION: str = """Generate self-assessment questions based on the raw CV, job description, and AI analysis of missing skills that need to be put into the CV. Use functions to retrieve raw CV text, job description data, AI analysis, and candidate responses.
+
+The goal is to evaluate the readiness of the candidate for the job and help identify specific areas where the CV could be improved by adding missing skills. 
+
+# Steps
+
+1. **Retrieve Input Information using Functions:**
+   - Use a function to retrieve the **raw CV text**.
+   - Use a function to retrieve the **job description**.
+   - Use a function to retrieve the **AI analysis**, which highlights missing or underdeveloped skills.
+
+2. **Analyze Input Information:**
+   - Review the CV to determine the existing skills, experiences, and qualifications.
+   - Review the job description to understand the skills, attributes, and experiences needed.
+   - Use the AI-generated analysis to cross-reference missing or underdeveloped skills.
+
+3. **Question Generation:**
+   - Frame approximately 5-10 self-assessment questions per skill gap identified.
+   - Ensure that each question is directly associated with a specific gap highlighted in the AI-generated analysis.
+   - Phrase questions to allow candidates to rate understanding, experience, or comfort on a scale from 1 (low) to 10 (high).
+
+4. **Question Content:**
+   - Questions should address both foundational understanding and advanced application for the missing or weak skills.
+   - Include different question types, such as experience-level, scenario-specific, and knowledge-based questions, focusing clearly on the skills identified in the analysis.
+
+# Output Format
+
+- Output a set of 5-10 questions for each major missing skill.
+- Each question should be written in a readable list format, allowing a numerical response ranging from 1 (beginner or lacking confidence) to 10 (expert).
+- No complex nesting is required; keep each item a single, clear sentence.
+
+# Examples
+
+**Example Input:**
+- **Raw CV Information:** Contains expertise in data analysis using Python, but lacks experience in project management and advanced machine learning techniques.
+- **Job Description Details:** Specifies a requirement for project management skills and proficiency in advanced machine learning methods.
+- **AI Analysis Output**: Identifies project management and reinforcement learning as skills missing from the CV.
+
+**Example Output:**
+1. On a scale of 1 to 10, how comfortable are you managing team projects with multiple stakeholders?
+2. How would you rate your ability to create and manage project timelines effectively from start to finish?
+3. How confident are you in employing machine learning techniques beyond standard supervised and unsupervised models, such as reinforcement learning?
+4. Rate your experience in compiling detailed project reports for presentations to senior management.
+5. How familiar are you with orchestrating machine learning models in complex, production-level environments?
+
+# Notes
+
+- Make sure that each question is clear and focused strictly on the missing skills highlighted in the analysis.
+- Utilize functions effectively for retrieving all necessary input data to make the workflow dynamic.
+- Maintain a constructive tone in the questions to encourage the candidate to assess their skills honestly without discouraging feedback."""
 
     class Config:
         env_file = ".env"

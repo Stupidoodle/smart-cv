@@ -304,6 +304,132 @@ def initiate_assistant(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+    try:
+        self_assessment_assistant_entry = db.query(AssistantModel).filter(
+            AssistantModel.name == "Self Assessment Assistant"
+        )
+        if not self_assessment_assistant_entry.first():
+            try:
+                self_assessment_assistant_data = ai_service.create_assistant(
+                    name="Self Assessment Assistant",
+                    instructions=settings.SELF_ASSESSMENT_INSTRUCTION,
+                    model="gpt-4o-mini",
+                    tools=[
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "fetch_job_description_1",
+                                "description": "Retrieve the job description",
+                                "strict": True,
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {},
+                                    "additionalProperties": False,
+                                    "required": [],
+                                },
+                            },
+                        },
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "fetch_candidate_cv_1",
+                                "description": "Retrieve the candidate's CV",
+                                "strict": True,
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {},
+                                    "additionalProperties": False,
+                                    "required": [],
+                                },
+                            },
+                        },
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "fetch_ai_analysis",
+                                "description": "Fetches AI-generated analysis without any parameters",
+                                "strict": True,
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {},
+                                    "additionalProperties": False,
+                                    "required": [],
+                                },
+                            },
+                        },
+                    ],
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "questions_scale",
+                            "strict": True,
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "questions": {
+                                        "type": "array",
+                                        "description": "A list of questions that will be answered on a scale of 1-10.",
+                                        "items": {
+                                            "type": "string",
+                                            "description": "A question to be rated on a scale of 1-10.",
+                                        },
+                                    }
+                                },
+                                "required": ["questions"],
+                                "additionalProperties": False,
+                            },
+                        },
+                    },
+                )
+                db_self_assessment_assistant = AssistantModel(
+                    id=self_assessment_assistant_data.id,
+                    name=self_assessment_assistant_data.name,
+                    instructions=self_assessment_assistant_data.instructions,
+                    model=self_assessment_assistant_data.model,
+                )
+                db.add(db_self_assessment_assistant)
+                db.commit()
+                db.refresh(db_self_assessment_assistant)
+
+                for tool in self_assessment_assistant_data.tools:
+                    tool_entry = (
+                        db.query(ToolModel)
+                        .filter(
+                            ToolModel.assistant_id == db_self_assessment_assistant.id,
+                            ToolModel.type == tool.type,
+                        )
+                        .filter(
+                            cast(ToolModel.function_definition, JSONB)
+                            == json.dumps(tool.function.model_dump())
+                            if tool.type == "function"
+                            else true()
+                        )
+                        .first()
+                    )
+
+                    if not tool_entry:
+                        db_tool = ToolModel(
+                            id=(
+                                tool.function.name
+                                if tool.type == "function"
+                                else tool.type
+                            ),
+                            assistant_id=db_self_assessment_assistant.id,
+                            type=tool.type,
+                            function_definition=(
+                                tool.function.model_dump()
+                                if tool.type == "function"
+                                else None
+                            ),
+                        )
+                        db.add(db_tool)
+                        db.commit()
+                        db.refresh(db_tool)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
     return {"message": "Assistant(s) created successfully"}
 
 
