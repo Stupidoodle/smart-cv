@@ -626,10 +626,8 @@ elif choice == "Assistant Management":
                     st.markdown("**Tools:**")
                     for tool in assistant["tools"]:
                         tool_info = f"- **Type:** {tool['type']}"
-                        if tool["function"]:
-                            tool_info += (
-                                f", **Function Name:** {tool['function']['name']}"
-                            )
+                        if tool["type"] == "function":
+                            tool_info += f", **Function Name:** {tool['id']}"
                         st.markdown(tool_info)
                     st.markdown("---")
         except Exception as e:

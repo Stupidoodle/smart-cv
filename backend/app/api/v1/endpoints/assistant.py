@@ -485,7 +485,6 @@ def list_assistants(skip: int = 0, limit: int = 100, db: Session = Depends(get_d
 
                 # Process tools for the new assistant
             for tool in assistant.tools:
-                print(tool)
                 tool_entry = (
                     db.query(ToolModel)
                     .filter(
