@@ -229,6 +229,9 @@ elif choice == "View Analysis":
                 if "conversation_data" not in st.session_state:
                     st.session_state.conversation_data = None
 
+                if "run_status" not in st.session_state:
+                    st.session_state.run_status = None
+
                 get_analysis_button = st.button("Get Analysis")
 
                 if get_analysis_button:
@@ -356,7 +359,10 @@ elif choice == "View Analysis":
                                     except Exception as e:
                                         st.sidebar.error(f"An error occurred: {e}")
 
-                if st.session_state.conversation_data:
+                if (
+                    st.session_state.conversation_data
+                    and st.session_state.run_status is None
+                ):
                     conversation = st.session_state.conversation_data
                     st.sidebar.success("Conversation initiated successfully!")
                     st.sidebar.write(
@@ -402,28 +408,32 @@ elif choice == "View Analysis":
                         run_status = poll_run(conversation["id"], run_id)
 
                         if run_status == "completed":
-                            st.sidebar.success("Analysis completed successfully!")
-                            # Fetch conversation messages
-                            messages = get_messages(conversation["id"])
-                            for msg in messages:
-                                if msg["role"] == "assistant":
-                                    try:
-                                        questions = json.loads(msg["content"])
-
-                                        for question in questions["questions"]:
-                                            st.sidebar.slider(
-                                                question,
-                                                1,
-                                                10,
-                                                5,
-                                            )
-
-                                    except json.JSONDecodeError:
-                                        st.sidebar.markdown(
-                                            f"**AI Assistant:** {msg['content']}"
-                                        )
+                            st.session_state.run_status = run_status
                         else:
                             st.sidebar.error("Analysis failed or is still in progress.")
+
+                if st.session_state.run_status == "completed":
+                    conversation = st.session_state.conversation_data
+                    st.sidebar.success("Analysis completed successfully!")
+                    # Fetch conversation messages
+                    messages = get_messages(conversation["id"])
+                    for msg in messages:
+                        if msg["role"] == "assistant":
+                            try:
+                                questions = json.loads(msg["content"])
+
+                                for question in questions["questions"]:
+                                    st.sidebar.slider(
+                                        question,
+                                        1,
+                                        10,
+                                        5,
+                                    )
+
+                            except json.JSONDecodeError:
+                                st.sidebar.markdown(
+                                    f"**AI Assistant:** {msg['content']}"
+                                )
 
 elif choice == "Job Management":
     st.header("Manage Job Postings")
@@ -446,6 +456,7 @@ elif choice == "Job Management":
                         st.markdown(f"**Location:** {job.get('location', 'N/A')}")
                         st.markdown(f"**Description:** {job['description']}")
                         st.markdown(f"**Posted At:** {job['posted_at']}")
+                        st.markdown(f"**Status:** {job['status']}")
                         st.markdown("---")
             else:
                 st.error(f"Failed to retrieve jobs: {response.text}")
@@ -456,6 +467,17 @@ elif choice == "Job Management":
         st.subheader("Add a New Job Posting")
         with st.form("add_job_form"):
             title = st.text_input("Job Title")
+            status = st.selectbox(
+                "Status",
+                [
+                    "To be submitted",
+                    "Submitted",
+                    "Interview",
+                    "Offer",
+                    "Rejected",
+                    "Hired",
+                ],
+            )
             company = st.text_input("Company")
             location = st.text_input("Location")
             description = st.text_area("Job Description")
@@ -466,6 +488,7 @@ elif choice == "Job Management":
                 else:
                     job_data = {
                         "title": title,
+                        "status": status,
                         "company": company,
                         "location": location,
                         "description": description,
@@ -500,6 +523,25 @@ elif choice == "Job Management":
                     job = response.json()
                     with st.form("update_job_form"):
                         title = st.text_input("Job Title", value=job["title"])
+                        status = st.selectbox(
+                            "Status",
+                            [
+                                "To be submitted",
+                                "Submitted",
+                                "Interview",
+                                "Offer",
+                                "Rejected",
+                                "Hired",
+                            ],
+                            index=[
+                                "To be submitted",
+                                "Submitted",
+                                "Interview",
+                                "Offer",
+                                "Rejected",
+                                "Hired",
+                            ].index(job["status"]),
+                        )
                         company = st.text_input("Company", value=job["company"])
                         location = st.text_input(
                             "Location", value=job.get("location", "")
@@ -511,6 +553,7 @@ elif choice == "Job Management":
                         if submitted:
                             update_data = {
                                 "title": title,
+                                "status": status,
                                 "company": company,
                                 "location": location,
                                 "description": description,

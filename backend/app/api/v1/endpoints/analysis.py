@@ -47,7 +47,7 @@ def start_analysis(analysis_request: AnalysisInitiate, db: Session = Depends(get
 
     try:
         # Perform analysis
-        analyze_cv(analysis_request.cv_id, analysis_request.job_id)
+        analyze_cv(analysis_request.cv_id, analysis_request.job_id)  # No need to fix
 
         # Retrieve the newly created analysis
         analysis = (

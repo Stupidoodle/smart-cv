@@ -6,7 +6,17 @@ from sqlalchemy import pool
 from alembic import context
 
 from app.models.base import Base
-from app.models import conversation, assistant, analysis, cv, job, message, run, tool
+from app.models import (
+    conversation,
+    assistant,
+    analysis,
+    cv,
+    job,
+    message,
+    run,
+    tool,
+    assessment,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -1,5 +1,13 @@
 from fastapi import FastAPI
-from app.api.v1.endpoints import cv, jobs, analysis, assistant, conversation, run
+from app.api.v1.endpoints import (
+    cv,
+    jobs,
+    analysis,
+    assistant,
+    conversation,
+    run,
+    assessment,
+)
 from app.core.config import settings
 
 app = FastAPI(
@@ -24,6 +32,9 @@ app.include_router(
     tags=["Conversations"],
 )
 app.include_router(run.router, prefix=f"{settings.API_V1_STR}/runs", tags=["Runs"])
+app.include_router(
+    assessment.router, prefix=f"{settings.API_V1_STR}/assessments", tags=["Assessments"]
+)
 
 
 @app.get("/")

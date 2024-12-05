@@ -22,6 +22,7 @@ def get_db():
 def create_job(job: JobCreate, db: Session = Depends(get_db)):
     db_job = Job(
         title=job.title,
+        status=job.status,
         description=job.description,
         company=job.company,
         location=job.location,
@@ -52,7 +53,7 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
 
-    for key, value in job_update.dict(exclude_unset=True).items():
+    for key, value in job_update.model_dump(exclude_unset=True).items():
         setattr(job, key, value)
 
     db.commit()
