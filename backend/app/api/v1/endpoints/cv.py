@@ -24,10 +24,10 @@ def get_db():
 
 @router.post("/upload", response_model=CVResponse)
 async def upload_cv(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    if file.content_type != "text/x-tex":
+    if file.content_type != "text/x-tex" and file.content_type != "application/pdf":
         raise HTTPException(
             status_code=400,
-            detail="Invalid file type. Please upload a LaTeX (.tex) file.",
+            detail="Invalid file type. Please upload a LaTeX (.tex) or PDF (.pdf) file.",
         )
 
     try:

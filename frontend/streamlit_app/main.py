@@ -173,10 +173,15 @@ def add_initial_message(conversation_id, content="Follow your instructions."):
 
 if choice == "Upload CV":
     st.header("Upload Your CV")
-    uploaded_file = st.file_uploader("Choose a LaTeX file", type="tex")
+    uploaded_file = st.file_uploader("Choose a LaTeX file", type=["tex", "pdf"])
     if uploaded_file is not None:
         if st.button("Upload CV"):
-            files = {"file": (uploaded_file.name, uploaded_file, "text/x-tex")}
+            mime_type = (
+                "application/pdf"
+                if uploaded_file.name.endswith(".pdf")
+                else "text/x-tex"
+            )
+            files = {"file": (uploaded_file.name, uploaded_file, mime_type)}
             try:
                 response = requests.post(f"{API_BASE_URL}/cv/upload", files=files)
                 if response.status_code == 200:

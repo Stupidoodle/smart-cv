@@ -124,9 +124,15 @@ def handle_run(
                     session.query(Job).filter(Job.id == conversation.job_id).first()
                 )
 
-                pdf_file_path = cv_entry.filepath.replace(".tex", ".pdf")
-                if not os.path.exists(pdf_file_path):
-                    compile_latex(cv_entry.filepath)
+                path = None
+
+                if cv_entry.filepath.endswith(".pdf"):
+                    path = cv_entry.filepath
+                else:
+                    pdf_file_path = cv_entry.filepath.replace(".tex", ".pdf")
+                    path = PDF_DIR + "/" + os.path.basename(pdf_file_path)
+                    if not os.path.exists(pdf_file_path):
+                        compile_latex(cv_entry.filepath)
 
                 cv_id = cv_entry.id
                 job_id = job_entry.id
@@ -140,9 +146,7 @@ def handle_run(
                         function_name == "fetch_candidate_cv"
                         or function_name == "fetch_candidate_cv_1"
                     ):
-                        cv_text = extract_text_from_pdf(
-                            PDF_DIR + "/" + os.path.basename(pdf_file_path)
-                        )
+                        cv_text = extract_text_from_pdf(path)
                         cv_text = pre_process(
                             cv_text, ai_service, session, cv_id, job_id
                         )
@@ -393,12 +397,16 @@ def analyze_cv(
             raise Exception("Job not found in database.")
 
         # Extract text from CV
-        pdf_file_path = cv_entry.filepath.replace(".tex", ".pdf")
-        if not os.path.exists(pdf_file_path):
-            compile_latex(str(cv_entry.filepath))
-        extracted_text = extract_text_from_pdf(
-            PDF_DIR + "/" + os.path.basename(pdf_file_path)
-        )
+        path = None
+
+        if cv_entry.filepath.endswith(".pdf"):
+            path = cv_entry.filepath
+        else:
+            pdf_file_path = cv_entry.filepath.replace(".tex", ".pdf")
+            path = PDF_DIR + "/" + os.path.basename(pdf_file_path)
+            if not os.path.exists(pdf_file_path):
+                compile_latex(cv_entry.filepath)
+        extracted_text = extract_text_from_pdf(path)
 
         # Extract text from Job Description
         job_description = str(job_entry.description)
