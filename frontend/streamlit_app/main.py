@@ -1,3 +1,5 @@
+import re
+
 import streamlit as st
 import requests
 from datetime import datetime
@@ -138,7 +140,7 @@ def poll_run(conversation_id, run_id):
     run_status = "pending"
 
     status_placeholder = st.empty()
-    while run_status not in ["completed"]:
+    while run_status not in ["completed", "failed", "cancelled"]:
         time.sleep(2)  # Polling interval
         response = requests.get(f"{API_BASE_URL}/runs/{conversation_id}/run/{run_id}")
         if response.status_code == 200:
@@ -473,6 +475,7 @@ elif choice == "Job Management":
                         st.markdown(f"**Description:** {job['description']}")
                         st.markdown(f"**Posted At:** {job['posted_at']}")
                         st.markdown(f"**Status:** {job['status']}")
+                        st.markdown(f"**URL:** {job.get('url', 'N/A')}")
                         st.markdown("---")
             else:
                 st.error(f"Failed to retrieve jobs: {response.text}")
@@ -497,10 +500,22 @@ elif choice == "Job Management":
             company = st.text_input("Company")
             location = st.text_input("Location")
             description = st.text_area("Job Description")
+            url = st.text_input("Job URL")
             submitted = st.form_submit_button("Add Job")
             if submitted:
-                if not title or not company or not description:
+                if url:
+                    if not re.match(
+                        r"^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$",
+                        url,
+                    ):
+                        st.error("Please enter a valid URL.")
+                if not url and (not title or not company or not description):
                     st.error("Please fill in all required fields.")
+                elif not url or not re.match(
+                    r"^http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+$",
+                    url,
+                ):
+                    st.error("Please enter a valid URL.")
                 else:
                     job_data = {
                         "title": title,
@@ -508,6 +523,7 @@ elif choice == "Job Management":
                         "company": company,
                         "location": location,
                         "description": description,
+                        "url": url,
                     }
                     try:
                         response = requests.post(f"{API_BASE_URL}/jobs/", json=job_data)

@@ -163,9 +163,10 @@ pytest backend/tests/
 
 ## Roadmap
 
-- [ ] Get jobs from link
-  - [ ] Better Job ID tracking
-- [ ] Native PDF support
+- [X] Get jobs from link
+  - [ ] ~~Better Job ID tracking~~ Note: we do not need this anymore since we have 
+    the job url now
+- [X] Native PDF support
 - [ ] Self assessment integration
 - [ ] Skill system and integration
 - [ ] Enhanced interview preparation system

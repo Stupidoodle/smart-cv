@@ -1,7 +1,9 @@
 import json
+import requests
 from datetime import datetime
 
 import spacy
+from bs4 import BeautifulSoup
 from openai.types.beta.threads import Run
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -119,23 +121,6 @@ def handle_run(
                 )
 
                 tool_outputs = []
-                cv_entry = session.query(CV).filter(CV.id == conversation.cv_id).first()
-                job_entry = (
-                    session.query(Job).filter(Job.id == conversation.job_id).first()
-                )
-
-                path = None
-
-                if cv_entry.filepath.endswith(".pdf"):
-                    path = cv_entry.filepath
-                else:
-                    pdf_file_path = cv_entry.filepath.replace(".tex", ".pdf")
-                    path = PDF_DIR + "/" + os.path.basename(pdf_file_path)
-                    if not os.path.exists(pdf_file_path):
-                        compile_latex(cv_entry.filepath)
-
-                cv_id = cv_entry.id
-                job_id = job_entry.id
 
                 for (
                     tool_call
@@ -146,6 +131,29 @@ def handle_run(
                         function_name == "fetch_candidate_cv"
                         or function_name == "fetch_candidate_cv_1"
                     ):
+                        cv_entry = (
+                            session.query(CV)
+                            .filter(CV.id == conversation.cv_id)
+                            .first()
+                        )
+                        job_entry = (
+                            session.query(Job)
+                            .filter(Job.id == conversation.job_id)
+                            .first()
+                        )
+
+                        path = None
+
+                        if cv_entry.filepath.endswith(".pdf"):
+                            path = cv_entry.filepath
+                        else:
+                            pdf_file_path = cv_entry.filepath.replace(".tex", ".pdf")
+                            path = PDF_DIR + "/" + os.path.basename(pdf_file_path)
+                            if not os.path.exists(pdf_file_path):
+                                compile_latex(cv_entry.filepath)
+
+                        cv_id = cv_entry.id
+                        job_id = job_entry.id
                         cv_text = extract_text_from_pdf(path)
                         cv_text = pre_process(
                             cv_text, ai_service, session, cv_id, job_id
@@ -161,6 +169,29 @@ def handle_run(
                         function_name == "fetch_job_description"
                         or function_name == "fetch_job_description_1"
                     ):
+                        cv_entry = (
+                            session.query(CV)
+                            .filter(CV.id == conversation.cv_id)
+                            .first()
+                        )
+                        job_entry = (
+                            session.query(Job)
+                            .filter(Job.id == conversation.job_id)
+                            .first()
+                        )
+
+                        path = None
+
+                        if cv_entry.filepath.endswith(".pdf"):
+                            path = cv_entry.filepath
+                        else:
+                            pdf_file_path = cv_entry.filepath.replace(".tex", ".pdf")
+                            path = PDF_DIR + "/" + os.path.basename(pdf_file_path)
+                            if not os.path.exists(pdf_file_path):
+                                compile_latex(cv_entry.filepath)
+
+                        cv_id = cv_entry.id
+                        job_id = job_entry.id
                         job_description = job_entry.description
                         job_description = pre_process(
                             job_description, ai_service, session, cv_id, job_id
@@ -327,6 +358,30 @@ def handle_run(
                         except Exception as e:
                             raise Exception(f"Error during analysis: {e}")
 
+                    elif function_name == "get_job_text":
+                        job_url = (
+                            session.query(Job)
+                            .filter(Job.id == conversation.job_id)
+                            .first()
+                            .url
+                        )
+
+                        response = requests.get(job_url)
+
+                        if response.status_code == 200:
+                            soup = BeautifulSoup(response.content, "html.parser")
+                            text = soup.get_text()
+                            tool_outputs.append(
+                                {
+                                    "tool_call_id": tool_call.id,
+                                    "output": text,
+                                }
+                            )
+                        else:
+                            raise Exception(
+                                f"Failed to fetch the URL. Status code: {response.status_code}"
+                            )
+
                 run_entry = (
                     session.query(RunModel)
                     .filter(
@@ -354,6 +409,7 @@ def handle_run(
 
             except Exception as e:
                 session.rollback()
+                print("HALLO ERROR: " + e)
                 raise e
 
     return current_run

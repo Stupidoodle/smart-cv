@@ -8,7 +8,7 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id = Column(String, primary_key=True, index=True)
-    cv_id = Column(Integer, ForeignKey("cvs.id"), nullable=False)
+    cv_id = Column(Integer, ForeignKey("cvs.id"), nullable=True)
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
     assistant_id = Column(String, ForeignKey("assistants.id"), nullable=False)
     analysis_id = Column(Integer, nullable=True)

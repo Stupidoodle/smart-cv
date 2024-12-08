@@ -244,6 +244,18 @@ The goal is to evaluate the readiness of the candidate for the job and help iden
 - Make sure that each question is clear and focused strictly on the missing skills highlighted in the analysis.
 - Utilize functions effectively for retrieving all necessary input data to make the workflow dynamic.
 - Maintain a constructive tone in the questions to encourage the candidate to assess their skills honestly without discouraging feedback."""
+    JOB_INSTRUCTION: str = """You are an assistant tasked with extracting job details from a raw text response. Follow these rules:
+
+1. Extract and return the following fields:
+   - **Job Title**: Identify the job title explicitly mentioned in the text.
+   - **Job Company**: Extract the company's name.
+   - **Job Location**: Locate and extract the job's location.
+   - **Job Description**: Include the entire job description. This includes responsibilities, requirements, qualifications, and benefits.
+
+2. Preserve the formatting and full content of the description to ensure no information is lost.
+
+3. Handle cases where a field might not be explicitly mentioned. If a field is missing, return "N/A" for that field.
+"""
 
     class Config:
         env_file = ".env"

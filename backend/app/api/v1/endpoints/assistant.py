@@ -430,6 +430,116 @@ def initiate_assistant(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+    try:
+        job_assistant_entry = db.query(AssistantModel).filter(
+            AssistantModel.name == "Job Assistant"
+        )
+        if not job_assistant_entry.first():
+            try:
+                job_assistant_data = ai_service.create_assistant(
+                    name="Job Assistant",
+                    instructions=settings.JOB_INSTRUCTION,
+                    model="gpt-4o-2024-11-20",
+                    tools=[
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "get_job_text",
+                                "description": "Retrieves job text without any parameters",
+                                "strict": True,
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {},
+                                    "additionalProperties": False,
+                                    "required": [],
+                                },
+                            },
+                        }
+                    ],
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "job",
+                            "strict": True,
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "job_title": {
+                                        "type": "string",
+                                        "description": "The title of the job position.",
+                                    },
+                                    "job_description": {
+                                        "type": "string",
+                                        "description": "A detailed description of the job responsibilities and requirements.",
+                                    },
+                                    "job_company": {
+                                        "type": "string",
+                                        "description": "The name of the company offering the job.",
+                                    },
+                                    "job_location": {
+                                        "type": "string",
+                                        "description": "The geographical location of the job.",
+                                    },
+                                },
+                                "required": [
+                                    "job_title",
+                                    "job_description",
+                                    "job_company",
+                                    "job_location",
+                                ],
+                                "additionalProperties": False,
+                            },
+                        },
+                    },
+                )
+                db_job_assistant = AssistantModel(
+                    id=job_assistant_data.id,
+                    name=job_assistant_data.name,
+                    instructions=job_assistant_data.instructions,
+                    model=job_assistant_data.model,
+                )
+                db.add(db_job_assistant)
+                db.commit()
+                db.refresh(db_job_assistant)
+
+                for tool in job_assistant_data.tools:
+                    tool_entry = (
+                        db.query(ToolModel)
+                        .filter(
+                            ToolModel.assistant_id == db_job_assistant.id,
+                            ToolModel.type == tool.type,
+                        )
+                        .filter(
+                            cast(ToolModel.function_definition, JSONB)
+                            == json.dumps(tool.function.model_dump())
+                            if tool.type == "function"
+                            else true()
+                        )
+                        .first()
+                    )
+
+                    if not tool_entry:
+                        db_tool = ToolModel(
+                            id=(
+                                tool.function.name
+                                if tool.type == "function"
+                                else tool.type
+                            ),
+                            assistant_id=db_job_assistant.id,
+                            type=tool.type,
+                            function_definition=(
+                                tool.function.model_dump()
+                                if tool.type == "function"
+                                else None
+                            ),
+                        )
+                        db.add(db_tool)
+                        db.commit()
+                        db.refresh(db_tool)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     return {"message": "Assistant(s) created successfully"}
 
 

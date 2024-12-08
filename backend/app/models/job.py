@@ -14,6 +14,7 @@ class Job(Base):
     company = Column(String, nullable=False)
     location = Column(String, nullable=True)
     posted_at = Column(DateTime, default=datetime.utcnow)
+    url = Column(String, nullable=True)
 
     analysis_results = relationship("AnalysisResult", back_populates="job")
     conversations = relationship("Conversation", back_populates="job")
