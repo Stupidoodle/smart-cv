@@ -133,7 +133,8 @@ Key endpoints include:
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines before submitting pull requests.
+Contributions are welcome! ~~Please read my contributing guidelines~~ before submitting 
+pull requests.
 
 ### Development Setup
 
@@ -156,7 +157,7 @@ pip install -r backend/base-requirements.txt
 pre-commit install
 ```
 
-### Running Tests
+### ~~Running Tests~~
 ```bash
 pytest backend/tests/
 ```

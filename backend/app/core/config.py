@@ -21,8 +21,9 @@ class Settings(BaseSettings):
 
 3. **Static Analysis with Keywords:**
    - Instead of retrieving the static analysis result directly, initiate a function call to start static analysis by utilizing the extracted keywords.
+   - These scores are faulty as of now, so do not rely on them.
    - Use `start_static_analysis(essential_keywords, AnalysisResult)`.
-   - Typical analysis result is represented as: 
+   - Typical analysis result is represented as:
    ```python
    AnalysisResult(
        cv_id=cv_id,
@@ -55,12 +56,16 @@ class Settings(BaseSettings):
    - Highlight which specific skills, experiences, or qualifications are aligned.
    - Identify any notable gaps between the CV and job requirements, and suggest areas for improvement.
    - Provide recommendations for tailoring the CV to better match the job requirements, making use of the analysis metrics.
+   - Include alignment of skills in percent and chances in percent to pass through 
+   screening, interview (with and without preparation), and getting an offer with an 
+   explanation of the chances.
 
 # Insights to Provide
 
 - **Score-Based Overall Analysis:**
   - *Keyword Match Score*: [Explain how keywords from the CV match the JD and point out key areas]
   - *Similarity Metrics*: [BERT, Cosine, Jaccard, etc. scores for deeper content match insights]
+  - *Skills Alignment Percentage*: [Percentage representation of aligned skills]
 
 - **Skills Alignment:**
   - *Aligned Skills*: [List skills present in both the JD and CV along with relevant similarity scores]
@@ -90,6 +95,7 @@ Provide the output in structured text:
     - NER Similarity Score: [Score Value and Commentary]
     - LSA Analysis Score: [Score Value and Commentary]
     - Aggregated Score: [Score Value and Commentary]
+  - *Skills Alignment Percentage*: [Percentage and Explanation]
 
 - **Skills Match:**
   - *Aligned Skills*: [List aligned skills with relevance scoring]
@@ -105,6 +111,12 @@ Provide the output in structured text:
 
 - **Recommendations:**
   - [Detailed and actionable suggestions]
+
+- **Chances to Proceed in Hiring**:
+  - *Screening Chance*: [Percent of passing screening]
+  - *Interview Chance Without Prep*: [Percent of passing interview without preparation]
+  - *Interview Chance With Prep*: [Percent of passing with preparation]
+  - *Offer Chance*: [Percent of receiving an offer]
 
 # Example
 
@@ -143,6 +155,7 @@ Provide the output in structured text:
     - **Jaccard Similarity Score**: Moderate score – needs improvement in overlapping keywords.
     - **NER Similarity Score**: Indicates weaker entity similarity, suggesting missing relevant certifications.
     - **LSA Analysis Score**: Suggests a good conceptual alignment.
+  - *Skills Alignment Percentage*: 85% aligned skills.
 
 - **Skills Match:**
   - *Aligned Skills*: Python, Machine Learning
@@ -160,7 +173,17 @@ Provide the output in structured text:
   - Include any SQL coursework or projects.
   - Add cloud-related experience or projects.
 
-# Notes 
+- **Chances to Proceed in Hiring**:
+  - *Screening Chance*: 70%
+    - *Explanation:*
+  - *Interview Chance Without Prep*: 60%
+    - *Explanation:*
+  - *Interview Chance With Prep*: 80%
+    - *Explanation:*
+  - *Offer Chance*: 50%
+    - *Explanation:*
+
+# Notes
 
 - Integrate both static analysis metrics and content-specific insights for a comprehensive assessment.
 - Ensure any recommendations are guided by both the textual content analysis and similarity scores.
@@ -250,7 +273,7 @@ The goal is to evaluate the readiness of the candidate for the job and help iden
    - **Job Title**: Identify the job title explicitly mentioned in the text.
    - **Job Company**: Extract the company's name.
    - **Job Location**: Locate and extract the job's location.
-   - **Job Description**: Include the entire job description. This includes responsibilities, requirements, qualifications, and benefits.
+   - **Job Description**: Include the **ENTIRE** job description. This includes responsibilities, requirements, qualifications, and benefits.
 
 2. Preserve the formatting and full content of the description to ensure no information is lost.
 
