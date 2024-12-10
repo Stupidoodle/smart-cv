@@ -16,6 +16,7 @@ st.title("Applicant Tracking System for Applicants")
 
 menu = [
     "Upload CV",
+    "Profile",
     "View Analysis",
     "Job Management",
     "Assistant Management",
@@ -122,6 +123,19 @@ def get_conversation(conversation_id):
         return None
 
 
+def get_profile():
+    try:
+        response = requests.get(f"{API_BASE_URL}/profiles/")
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"Failed to fetch profile: {response.text}")
+            return None
+    except Exception as e:
+        st.error(f"An error occurred while fetching profile: {e}")
+        return None
+
+
 def initiate_run(conversation_id):
     try:
         response = requests.post(f"{API_BASE_URL}/runs/{conversation_id}/run")
@@ -200,6 +214,395 @@ if choice == "Upload CV":
                     st.error(f"Failed to upload CV: {response.text}")
             except Exception as e:
                 st.error(f"An error occurred: {e}")
+
+elif choice == "Profile":
+    st.header("Profiling")
+    sub_menu = st.sidebar.selectbox(
+        "Profile Menu", ["View Profile", "Update Profile", "Delete Profile"]
+    )
+
+    profile_labels = {
+        "Your name": {"key": "name", "type": "text_input", "choices": [""]},
+        "How do you prefer to receive feedback?": {
+            "key": "feedback_preference",
+            "type": "radio",
+            "choices": [
+                "Direct and to the point (e.g., 'This needs improvement.')",
+                "Constructive and encouraging (e.g., 'You’re doing well; here’s how to improve.')",
+                "Balanced with a mix of positives and negatives.",
+            ],
+        },
+        "How confident are you in your current job application approach?": {
+            "key": "confidence_level",
+            "type": "radio",
+            "choices": [
+                "Very confident—I believe my application is strong.",
+                "Somewhat confident—I know it could use improvement.",
+                "Neutral—I’m unsure if I’m on the right track.",
+                "Not confident—I feel like I’m missing something significant.",
+            ],
+        },
+        "How do you typically react to constructive criticism?": {
+            "key": "criticism_reaction",
+            "type": "radio",
+            "choices": [
+                "I appreciate it and use it to improve.",
+                "I reflect on it but may need encouragement to act.",
+                "I find it challenging but try to adapt.",
+                "I struggle with it and prefer focusing on positives.",
+            ],
+        },
+        "How do you feel about rejection during your job search?": {
+            "key": "rejection_reaction",
+            "type": "radio",
+            "choices": [
+                "I see it as an opportunity to learn.",
+                "It’s discouraging, but I keep going.",
+                "It makes me question my approach.",
+                "It feels like a setback I struggle to overcome.",
+            ],
+        },
+        "What motivates you the most during your job search?": {
+            "key": "motivation",
+            "type": "radio",
+            "choices": [
+                "Personal growth and development.",
+                "Achieving financial stability.",
+                "Finding the perfect fit for my skills and values.",
+                "Overcoming challenges and landing a role quickly.",
+            ],
+        },
+        "What is your primary goal for using this tool?": {
+            "key": "primary_goal",
+            "type": "radio",
+            "choices": [
+                "Highlight and address gaps in my application.",
+                "Understand my strengths better to showcase them.",
+                "Receive suggestions to improve my chances of success.",
+                "Other.",
+            ],
+        },
+        "What kind of analysis would you find most helpful?": {
+            "key": "analysis_goal",
+            "type": "radio",
+            "choices": [
+                "Focus on my strengths to boost confidence.",
+                "Highlight specific areas where I can improve.",
+                "Provide a balanced overview of strengths and weaknesses.",
+                "Offer actionable steps without too much detail.",
+            ],
+        },
+        "Do you prefer high-level feedback or detailed breakdowns?": {
+            "key": "feedback_type",
+            "type": "radio",
+            "choices": [
+                "High-level overview with key insights.",
+                "Detailed breakdown of strengths, gaps, and next steps.",
+            ],
+        },
+        "How do you typically make improvements in your career?": {
+            "key": "improvement_type",
+            "type": "radio",
+            "choices": [
+                "By taking specific courses or certifications.",
+                "By gaining hands-on experience through projects.",
+                "By seeking feedback and mentorship.",
+                "By reading and researching independently.",
+            ],
+        },
+        "How important is it for you to receive detailed explanations of the analysis?": {
+            "key": "explanation_type",
+            "type": "radio",
+            "choices": [
+                "Very important—I want to understand every detail.",
+                "Somewhat important—I prefer key insights with some explanation.",
+                "Not important—I just want actionable results.",
+            ],
+        },
+        "How do you typically approach challenges in your career?": {
+            "key": "challenge_approach",
+            "type": "radio",
+            "choices": [
+                "Break them into smaller tasks and solve systematically.",
+                "Collaborate with others to find solutions.",
+                "Adapt and stay flexible.",
+                "Seek external advice or mentorship.",
+                "Reflect and learn from past experiences.",
+            ],
+        },
+        "When faced with multiple priorities, how do you decide what to focus on?": {
+            "key": "priority_focus",
+            "type": "radio",
+            "choices": [
+                "I rely on deadlines and urgency.",
+                "I evaluate the impact of each task.",
+                "I focus on tasks I feel most confident handling.",
+                "I seek advice or clarification when unsure.",
+            ],
+        },
+        "How confident are you about improving the gaps identified by the AI?": {
+            "key": "improvement_confidence",
+            "type": "radio",
+            "choices": [
+                "Very confident—I know exactly how to address them.",
+                "Somewhat confident—I’ll need guidance to improve.",
+                "Neutral—I’m unsure where to start.",
+                "Not confident—these gaps feel overwhelming.",
+            ],
+        },
+        "Why are you currently looking for a new role?": {
+            "key": "role_reason",
+            "type": "radio",
+            "choices": [
+                "Exploring new opportunities.",
+                "Transitioning industries.",
+                "Upskilling/reskilling.",
+                "Recently graduated.",
+                "Looking for better work-life balance.",
+                "Dissatisfied with current role.",
+                "Other.",
+            ],
+        },
+        "What type of roles are you primarily applying for?": {
+            "key": "role_type",
+            "type": "multiselect",
+            "choices": [
+                "Full-time.",
+                "Part-time.",
+                "Internship.",
+                "Freelance/Contract.",
+            ],
+        },
+        "What is your current application status?": {
+            "key": "application_status",
+            "type": "radio",
+            "choices": [
+                "Actively applying.",
+                "Preparing to apply.",
+                "Taking a break.",
+                "Other.",
+            ],
+        },
+        "What are the top challenges you face when applying for jobs?": {
+            "key": "top_challenges",
+            "type": "multiselect",
+            "choices": [
+                "Lack of responses from employers.",
+                "Difficulty tailoring my CV to job descriptions.",
+                "Identifying skill gaps.",
+                "Preparing for interviews.",
+                "Managing multiple applications.",
+            ],
+        },
+        "How confident are you in your current CV?": {
+            "key": "cv_confidence",
+            "type": "radio",
+            "choices": [
+                "Very confident.",
+                "Somewhat confident.",
+                "Neutral.",
+                "Not very confident.",
+                "Not confident at all.",
+            ],
+        },
+        "Do you usually tailor your CV for each job application?": {
+            "key": "cv_prep",
+            "type": "radio",
+            "choices": ["Always.", "Often.", "Sometimes.", "Rarely.", "Never."],
+        },
+        "What do you typically struggle with when tailoring your CV?": {
+            "key": "cv_struggles",
+            "type": "multiselect",
+            "choices": [
+                "Identifying relevant keywords.",
+                "Highlighting key achievements.",
+                "Matching skills with job requirements.",
+                "Formatting consistency.",
+            ],
+        },
+        "How do you currently track your job applications?": {
+            "key": "tracking_method",
+            "type": "radio",
+            "choices": [
+                "Spreadsheet.",
+                "Notes or to-do lists.",
+                "Job portal accounts.",
+                "Not tracking at all.",
+            ],
+        },
+        "What areas do you want to improve on in your job search?": {
+            "key": "search_improvements",
+            "type": "multiselect",
+            "choices": [
+                "CV quality.",
+                "Identifying skill gaps.",
+                "Application tracking and organization.",
+                "Interview preparation.",
+                "Confidence in applying.",
+            ],
+        },
+        "GitHub URL": {"key": "github_url", "type": "text_input", "choices": [""]},
+        "LinkedIn URL": {"key": "linkedin_url", "type": "text_input", "choices": [""]},
+    }
+
+    if sub_menu == "View Profile":
+        st.subheader("Your Profile")
+
+        response = requests.get(f"{API_BASE_URL}/profiles/")
+        if response.status_code == 200:
+            profile = response.json()
+
+            for label, config in profile_labels.items():
+                st.markdown(f"**{label}:** {profile.get(config["key"], 'N/A')}")
+        elif response.status_code == 404:
+            st.info("No profile found. Please create a profile first.")
+
+            profile_data = {}
+
+            for label, config in profile_labels.items():
+                field_type = config["type"]
+                key = config["key"]
+                choices = config["choices"]
+
+                if field_type == "text_input":
+                    profile_data[key] = st.text_input(label, max_chars=255)
+                elif field_type == "radio":
+                    selected_value = st.radio(label, choices, index=None)
+                    profile_data[key] = selected_value
+
+                    if selected_value == "Other.":
+                        profile_data[key] = st.text_input(label, max_chars=100)
+                elif field_type == "multiselect":
+                    profile_data[key] = st.multiselect(label, choices)
+                else:
+                    st.error(f"Unsupported field type: {field_type}")
+
+            if st.button("Create Profile"):
+                # Create a mapping of keys to labels
+                key_to_label = {
+                    config["key"]: label for label, config in profile_labels.items()
+                }
+
+                # Exclude 'github_url' and 'linkedin_url' from the required check
+                required_fields = {
+                    key: value
+                    for key, value in profile_data.items()
+                    if key not in ["github_url", "linkedin_url"]
+                }
+
+                # Find fields with None values
+                missing_fields = [
+                    key_to_label[key]
+                    for key, value in required_fields.items()
+                    if value is None or value == [] or value == ""
+                ]
+
+                if missing_fields:
+                    # Inform the user which fields (labels) are missing
+                    st.error(
+                        f"The following fields must be filled:  \n{',  \n'.join(missing_fields)}"
+                    )
+                else:
+                    try:
+                        response = requests.post(
+                            f"{API_BASE_URL}/profiles/", json=profile_data
+                        )
+                        if response.status_code == 201:
+                            st.success("Profile created successfully.")
+                            st.write(response.json())
+                        else:
+                            st.error(f"Failed to create profile: {response.text}")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+        else:
+            st.error(f"Failed to retrieve profile: {response.text}")
+
+    elif sub_menu == "Update Profile":
+        st.subheader("Update Profile")
+        response = requests.get(f"{API_BASE_URL}/profiles/")
+
+        if response.status_code == 200:
+            profile = response.json()
+            profile_data = {}
+            for label, config in profile_labels.items():
+                field_type = config["type"]
+                key = config["key"]
+                choices = config["choices"]
+
+                if field_type == "text_input":
+                    profile_data[key] = st.text_input(
+                        label, profile.get(key, "N/A"), max_chars=255
+                    )
+                elif field_type == "radio":
+                    if profile.get(key, "N/A") in choices:
+                        index = choices.index(profile.get(key, "N/A"))
+                    else:
+                        index = -1
+                    selected_value = st.radio(label, choices, index=index)
+                    profile_data[key] = selected_value
+                    if selected_value == "Other.":
+                        profile_data[key] = st.text_input(
+                            label, profile.get(key, "N/A"), max_chars=100
+                        )
+                elif field_type == "multiselect":
+                    profile_data[key] = st.multiselect(
+                        label, choices, profile.get(key, "N/A")
+                    )
+                else:
+                    st.error(f"Unsupported field type: {field_type}")
+
+            if st.button("Update Profile"):
+                key_to_label = {
+                    config["key"]: label for label, config in profile_labels.items()
+                }
+
+                # Exclude 'github_url' and 'linkedin_url' from the required check
+                required_fields = {
+                    key: value
+                    for key, value in profile_data.items()
+                    if key not in ["github_url", "linkedin_url"]
+                }
+
+                # Find fields with None values
+                missing_fields = [
+                    key_to_label[key]
+                    for key, value in required_fields.items()
+                    if value is None or value == [] or value == ""
+                ]
+
+                if missing_fields:
+                    # Inform the user which fields (labels) are missing
+                    st.error(
+                        f"The following fields must be filled:  \n{',  \n'.join(missing_fields)}"
+                    )
+                else:
+                    response = requests.put(
+                        f"{API_BASE_URL}/profiles/", json=profile_data
+                    )
+                    if response.status_code == 200:
+                        st.success("Profile updated successfully.")
+                        st.write(response.json())
+        else:
+            st.error(f"Failed to retrieve profile: {response.text}")
+
+    elif sub_menu == "Delete Profile":
+        st.subheader("Delete Profile")
+        response = requests.get(f"{API_BASE_URL}/profiles/")
+        if response.status_code == 200:
+            profile = response.json()
+
+            for label, config in profile_labels.items():
+                st.markdown(f"**{label}:** {profile.get(config['key'], 'N/A')}")
+
+            if st.button("Delete Profile"):
+                response = requests.delete(f"{API_BASE_URL}/profiles/{profile['id']}")
+                if response.status_code == 200:
+                    st.success("Profile deleted successfully.")
+                    st.write(response.json())
+                else:
+                    st.error(f"Failed to delete profile: {response.text}")
+        else:
+            st.error(f"Failed to retrieve profile: {response.text}")
 
 elif choice == "View Analysis":
     st.header("View Analysis Results")
@@ -740,6 +1143,7 @@ elif choice == "Start Analysis":
         assistants = get_assistants()
         cvs = get_cvs()
         jobs = get_jobs()
+        profile = get_profile()
 
         if not assistants:
             st.warning("No Assistants available. Please add an Assistant first.")
@@ -747,6 +1151,8 @@ elif choice == "Start Analysis":
             st.warning("No CVs available. Please upload a CV first.")
         if not jobs:
             st.warning("No Job Postings available. Please add a job first.")
+        if not profile:
+            st.warning("Please fill in your profile.")
 
         if assistants and cvs and jobs:
             assistant_options = {
@@ -768,6 +1174,14 @@ elif choice == "Start Analysis":
             }
             selected_job = st.selectbox("Select Job", list(job_options.keys()))
             job_id = job_options[selected_job]
+
+            profile_options = {
+                f"{profile['name']} (ID: {profile['id']})": profile["id"]
+            }
+            selected_profile = st.selectbox(
+                "Select Profile", list(profile_options.keys())
+            )
+            profile_id = profile_options[selected_profile]
 
             submitted = st.form_submit_button("Start Analysis")
             if submitted:

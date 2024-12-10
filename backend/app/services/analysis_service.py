@@ -20,6 +20,7 @@ from app.models.job import Job
 from app.models.assistant import Assistant as AssistantModel
 from app.models.conversation import Conversation as ConversationModel
 from app.models.message import Message
+from app.models.profile import Profile
 from app.models.run import Run as RunModel
 from app.schemas.analysis import AnalysisResponse as AnalysisResponseSchema
 from sqlalchemy.orm import Session
@@ -162,6 +163,21 @@ def handle_run(
                             {
                                 "tool_call_id": tool_call.id,
                                 "output": cv_text,
+                            }
+                        )
+
+                    elif function_name == "fetch_profile":
+                        profile_entry = session.query(Profile).first()
+                        profile_dict = {
+                            key: value
+                            for key, value in profile_entry.__dict__.items()
+                            if not key.startswith("_")
+                        }
+
+                        tool_outputs.append(
+                            {
+                                "tool_call_id": tool_call.id,
+                                "output": json.dumps(profile_dict),
                             }
                         )
 

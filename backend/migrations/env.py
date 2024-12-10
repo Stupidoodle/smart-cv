@@ -16,6 +16,7 @@ from app.models import (
     run,
     tool,
     assessment,
+    profile,
 )
 
 # this is the Alembic Config object, which provides

@@ -2,7 +2,7 @@ import json
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from sqlalchemy import true, String, cast
+from sqlalchemy import true, String, cast, case
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session
 from typing import List
@@ -163,6 +163,20 @@ def initiate_assistant(db: Session = Depends(get_db)):
                                         },
                                     },
                                     "additionalProperties": False,
+                                },
+                            },
+                        },
+                        {
+                            "type": "function",
+                            "function": {
+                                "name": "fetch_profile",
+                                "description": "Retrieve the applicants profile",
+                                "strict": True,
+                                "parameters": {
+                                    "type": "object",
+                                    "properties": {},
+                                    "additionalProperties": False,
+                                    "required": [],
                                 },
                             },
                         },
@@ -592,41 +606,72 @@ def list_assistants(skip: int = 0, limit: int = 100, db: Session = Depends(get_d
                 db.add(db_assistant)
                 db.commit()
                 db.refresh(db_assistant)
+            else:
+                assistant_entry.name = assistant.name
+                assistant_entry.instructions = assistant.instructions
+                assistant_entry.model = assistant.model
+                db.commit()
+                db.refresh(assistant_entry)
 
-                # Process tools for the new assistant
+            # Process tools for the new assistant
             for tool in assistant.tools:
-                tool_entry = (
+                print(tool)
+                tool_id = tool.function.name if tool.type == "function" else tool.type
+                existing_tool = (
                     db.query(ToolModel)
                     .filter(
+                        ToolModel.id == tool_id,
                         ToolModel.assistant_id == assistant_entry.id,
-                        ToolModel.type == tool.type,
-                    )
-                    .filter(
-                        cast(ToolModel.function_definition, String)
-                        == json.dumps(tool.function.model_dump())
-                        if tool.type == "function"
-                        else None
                     )
                     .first()
                 )
 
-                if not tool_entry:
-                    db_tool = ToolModel(
-                        id=(
-                            tool.function.name if tool.type == "function" else tool.type
-                        ),
-                        assistant_id=assistant_entry.id,
-                        type=tool.type,
-                        function_definition=(
-                            tool.function.model_dump()
-                            if tool.type == "function"
-                            else None
-                        ),
+                if existing_tool:
+                    # Update existing tool if needed
+                    existing_tool.type = tool.type
+                    existing_tool.function_definition = (
+                        tool.function.model_dump() if tool.type == "function" else None
                     )
-                    db.add(db_tool)
+                    db_tool = existing_tool
+                else:
+                    # Check if function definition matches
+                    tool_entry = (
+                        db.query(ToolModel)
+                        .filter(
+                            ToolModel.assistant_id == assistant_entry.id,
+                            ToolModel.type == tool.type,
+                            case(
+                                (
+                                    ToolModel.type == "function",
+                                    cast(ToolModel.function_definition, String)
+                                    == json.dumps(tool.function.model_dump()),
+                                ),
+                                else_=True,
+                            ),
+                        )
+                        .first()
+                    )
+
+                    if not tool_entry:
+                        # Create new tool if no matching tool exists
+                        db_tool = ToolModel(
+                            id=tool_id,
+                            assistant_id=assistant_entry.id,
+                            type=tool.type,
+                            function_definition=(
+                                tool.function.model_dump()
+                                if tool.type == "function"
+                                else None
+                            ),
+                        )
+                        db.add(db_tool)
+
+                try:
                     db.commit()
                     db.refresh(db_tool)
-
+                except Exception as e:
+                    db.rollback()
+                    raise
     # Fetch and return paginated list of assistants
     assistants = db.query(AssistantModel).offset(skip).limit(limit).all()
     return assistants

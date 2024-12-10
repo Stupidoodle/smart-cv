@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     conversation,
     run,
     assessment,
+    profile,
 )
 from app.core.config import settings
 
@@ -34,6 +35,9 @@ app.include_router(
 app.include_router(run.router, prefix=f"{settings.API_V1_STR}/runs", tags=["Runs"])
 app.include_router(
     assessment.router, prefix=f"{settings.API_V1_STR}/assessments", tags=["Assessments"]
+)
+app.include_router(
+    profile.router, prefix=f"{settings.API_V1_STR}/profiles", tags=["Profiles"]
 )
 
 
